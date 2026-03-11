@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crossword Creator - German Practice</title>
+<style>
+  :root {
+    --primary: #2c5f8a;
+    --primary-light: #3a7cb8;
+    --primary-dark: #1e4060;
+    --accent: #e8a838;
+    --accent-light: #f0c060;
+    --success: #4caf50;
+    --danger: #e74c3c;
+    --danger-light: #ff6b6b;
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --text: #2c3e50;
+    --text-light: #7f8c8d;
+    --border: #dce1e6;
+    --cell-size: 36px;
+    --highlight: #fff3cd;
+    --valid-highlight: rgba(76, 175, 80, 0.25);
+    --invalid-highlight: rgba(231, 76, 60, 0.25);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+
+  header h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+  }
+
+  header .subtitle {
+    font-size: 0.85rem;
+    opacity: 0.8;
+    font-weight: 400;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .app-layout {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    align-items: flex-start;
+  }
+
+  /* --- Sidebar / Word Panel --- */
+  .sidebar {
+    width: 340px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 12px 16px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-body {
+    padding: 16px;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .input-group label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .input-group input {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+  }
+
+  .input-group input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(58, 124, 184, 0.15);
+  }
+
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--primary-light); }
+
+  .btn-accent {
+    background: var(--accent);
+    color: var(--primary-dark);
+  }
+  .btn-accent:hover { background: var(--accent-light); }
+
+  .btn-danger {
+    background: var(--danger);
+    color: white;
+  }
+  .btn-danger:hover { background: var(--danger-light); }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { background: var(--bg); }
+
+  .btn-sm {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+
+  .btn-block {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  /* Word List */
+  .word-list {
+    list-style: none;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .word-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .word-list li:hover {
+    background: var(--bg);
+  }
+
+  .word-list li:last-child { border-bottom: none; }
+
+  .word-list li.selected {
+    background: var(--highlight);
+  }
+
+  .word-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .word-status.placed {
+    background: var(--success);
+  }
+
+  .word-status.unplaced {
+    background: var(--border);
+    border: 2px solid var(--text-light);
+  }
+
+  .word-text {
+    flex: 1;
+    font-weight: 600;
+  }
+
+  .word-hint {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .word-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .word-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--text-light);
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .word-actions button:hover {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  .word-actions button.remove-btn:hover {
+    background: var(--danger);
+    color: white;
+  }
+
+  .empty-list {
+    text-align: center;
+    color: var(--text-light);
+    padding: 24px 16px;
+    font-size: 0.9rem;
+  }
+
+  /* --- Grid Area --- */
+  .grid-area {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .grid-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .grid-toolbar label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+  }
+
+  .grid-toolbar input[type="number"] {
+    width: 60px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+
+  .grid-toolbar input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary-light);
+  }
+
+  .orientation-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .orientation-toggle button {
+    padding: 6px 14px;
+    border: none;
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-light);
+    transition: all 0.15s;
+  }
+
+  .orientation-toggle button.active {
+    background: var(--primary);
+    color: white;
+  }
+
+  .orientation-toggle button:not(.active):hover {
+    background: var(--bg);
+  }
+
+  .grid-container {
+    overflow: auto;
+    padding: 16px;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  .grid-scroll {
+    display: inline-block;
+  }
+
+  .crossword-grid {
+    display: grid;
+    gap: 0;
+    border: 2px solid var(--primary-dark);
+    user-select: none;
+  }
+
+  .grid-cell {
+    width: var(--cell-size);
+    height: var(--cell-size);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: var(--surface);
+    cursor: pointer;
+    transition: background 0.1s;
+    position: relative;
+  }
+
+  .grid-cell.empty {
+    background: #e8ecf0;
+  }
+
+  .grid-cell.filled {
+    background: var(--surface);
+    color: var(--primary-dark);
+  }
+
+  .grid-cell.preview-valid {
+    background: var(--valid-highlight);
+  }
+
+  .grid-cell.preview-invalid {
+    background: var(--invalid-highlight);
+  }
+
+  .grid-cell.suggestion {
+    background: rgba(232, 168, 56, 0.3);
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+
+  .grid-cell .cell-number {
+    position: absolute;
+    top: 1px;
+    left: 2px;
+    font-size: 0.55rem;
+    font-weight: 600;
+    color: var(--text-light);
+    line-height: 1;
+  }
+
+  /* Grid settings */
+  .grid-size-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text-light);
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  .status-bar.error {
+    color: var(--danger);
+    border-color: var(--danger);
+    background: rgba(231, 76, 60, 0.05);
+  }
+
+  .status-bar.success {
+    color: var(--success);
+    border-color: var(--success);
+    background: rgba(76, 175, 80, 0.05);
+  }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: auto;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h3 { font-size: 1.1rem; }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .modal-body pre {
+    background: var(--bg);
+    padding: 16px;
+    border-radius: 8px;
+    overflow: auto;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    max-height: 50vh;
+  }
+
+  .modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .app-layout {
+      flex-direction: column;
+    }
+    .sidebar {
+      width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Crossword Creator <span class="subtitle">- German Practice</span></h1>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-accent" onclick="autoPlaceAll()">Auto-place All</button>
+    <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="exportJSON()">Export JSON</button>
+    <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="clearGrid()">Clear Grid</button>
+  </div>
+</header>
+
+<div class="app-layout">
+  <!-- Sidebar: Word Management -->
+  <div class="sidebar">
+    <div class="panel">
+      <div class="panel-header">
+        <span>Add Word</span>
+      </div>
+      <div class="panel-body">
+        <div class="input-group">
+          <label for="wordInput">German Word</label>
+          <input type="text" id="wordInput" placeholder="e.g. Schmetterling" autocomplete="off">
+        </div>
+        <div class="input-group">
+          <label for="hintInput">Hint / Clue</label>
+          <input type="text" id="hintInput" placeholder="e.g. A beautiful insect that flies" autocomplete="off">
+        </div>
+        <button class="btn btn-primary btn-block" onclick="addWord()">Add Word</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>Word List</span>
+        <span id="wordCount" style="font-weight:400;font-size:0.8rem;opacity:0.8">0 words</span>
+      </div>
+      <div class="panel-body" style="padding:0">
+        <ul class="word-list" id="wordList">
+          <li class="empty-list" id="emptyListMsg">No words added yet. Add some German words above!</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>Selected Word Actions</span>
+      </div>
+      <div class="panel-body">
+        <div id="selectedWordInfo" style="margin-bottom:12px;font-size:0.9rem;color:var(--text-light)">
+          Select a word from the list to place it on the grid.
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary btn-sm" id="suggestBtn" onclick="suggestPlacement()" disabled>Suggest Placement</button>
+          <button class="btn btn-danger btn-sm" id="removeFromGridBtn" onclick="removeFromGrid()" disabled>Remove from Grid</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main: Grid -->
+  <div class="grid-area">
+    <div class="grid-toolbar">
+      <div class="grid-size-controls">
+        <label>Grid Size:</label>
+        <input type="number" id="gridRows" min="5" max="30" value="15">
+        <span style="color:var(--text-light)">x</span>
+        <input type="number" id="gridCols" min="5" max="30" value="15">
+        <button class="btn btn-outline btn-sm" onclick="resizeGrid()">Apply</button>
+      </div>
+
+      <div class="orientation-toggle">
+        <button id="orientH" class="active" onclick="setOrientation('horizontal')">Horizontal</button>
+        <button id="orientV" onclick="setOrientation('vertical')">Vertical</button>
+      </div>
+    </div>
+
+    <div class="grid-container">
+      <div class="grid-scroll">
+        <div class="crossword-grid" id="crosswordGrid"></div>
+      </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">
+      Ready. Add words and place them on the grid.
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Export Crossword JSON</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeModal()">&times; Close</button>
+    </div>
+    <div class="modal-body">
+      <pre id="exportContent"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="copyExport()">Copy to Clipboard</button>
+      <button class="btn btn-accent" onclick="downloadExport()">Download File</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA MODEL
+// ============================================================
+
+let state = {
+  rows: 15,
+  cols: 15,
+  grid: [],            // 2D array: null = empty, string = letter
+  words: [],           // { id, word, hint, placed, row, col, direction }
+  nextId: 1,
+  selectedWordId: null,
+  orientation: 'horizontal',
+  suggestions: [],     // [{row, col, direction, score}]
+};
+
+function createEmptyGrid(rows, cols) {
+  const grid = [];
+  for (let r = 0; r < rows; r++) {
+    grid[r] = [];
+    for (let c = 0; c < cols; c++) {
+      grid[r][c] = null;
+    }
+  }
+  return grid;
+}
+
+function initGrid() {
+  state.grid = createEmptyGrid(state.rows, state.cols);
+}
+
+// Normalize a word for grid placement: uppercase, handle special chars
+function normalizeWord(word) {
+  return word.toUpperCase().trim();
+}
+
+// Check if a word can be placed at (row, col) in the given direction
+// Returns { valid: bool, reason: string, intersections: number }
+function canPlace(word, row, col, direction, gridOverride) {
+  const grid = gridOverride || state.grid;
+  const normalized = normalizeWord(word);
+  const len = normalized.length;
+  const rows = grid.length;
+  const cols = grid[0].length;
+  let intersections = 0;
+
+  const dr = direction === 'vertical' ? 1 : 0;
+  const dc = direction === 'horizontal' ? 1 : 0;
+
+  // Check bounds
+  const endRow = row + dr * (len - 1);
+  const endCol = col + dc * (len - 1);
+  if (endRow >= rows || endCol >= cols || row < 0 || col < 0) {
+    return { valid: false, reason: 'Out of bounds', intersections: 0 };
+  }
+
+  // Check cell before the word (should be empty or edge)
+  const beforeRow = row - dr;
+  const beforeCol = col - dc;
+  if (beforeRow >= 0 && beforeCol >= 0 && grid[beforeRow][beforeCol] !== null) {
+    return { valid: false, reason: 'Adjacent conflict before word', intersections: 0 };
+  }
+
+  // Check cell after the word (should be empty or edge)
+  const afterRow = row + dr * len;
+  const afterCol = col + dc * len;
+  if (afterRow < rows && afterCol < cols && grid[afterRow][afterCol] !== null) {
+    return { valid: false, reason: 'Adjacent conflict after word', intersections: 0 };
+  }
+
+  // Check each cell of the word
+  for (let i = 0; i < len; i++) {
+    const r = row + dr * i;
+    const c = col + dc * i;
+    const letter = normalized[i];
+    const existing = grid[r][c];
+
+    if (existing !== null) {
+      if (existing !== letter) {
+        return { valid: false, reason: `Letter conflict at (${r},${c}): '${existing}' vs '${letter}'`, intersections: 0 };
+      }
+      // It's an intersection
+      intersections++;
+    } else {
+      // Cell is empty - check parallel adjacency (cells beside this letter perpendicular to word direction)
+      const perpDr = direction === 'horizontal' ? 1 : 0;
+      const perpDc = direction === 'vertical' ? 1 : 0;
+
+      const adj1r = r + perpDr;
+      const adj1c = c + perpDc;
+      const adj2r = r - perpDr;
+      const adj2c = c - perpDc;
+
+      if (adj1r >= 0 && adj1r < rows && adj1c >= 0 && adj1c < cols && grid[adj1r][adj1c] !== null) {
+        return { valid: false, reason: `Parallel adjacency conflict at (${r},${c})`, intersections: 0 };
+      }
+      if (adj2r >= 0 && adj2r < rows && adj2c >= 0 && adj2c < cols && grid[adj2r][adj2c] !== null) {
+        return { valid: false, reason: `Parallel adjacency conflict at (${r},${c})`, intersections: 0 };
+      }
+    }
+  }
+
+  return { valid: true, reason: 'OK', intersections };
+}
+
+// Place a word on the grid
+function placeWord(wordObj, row, col, direction) {
+  const normalized = normalizeWord(wordObj.word);
+  const dr = direction === 'vertical' ? 1 : 0;
+  const dc = direction === 'horizontal' ? 1 : 0;
+
+  for (let i = 0; i < normalized.length; i++) {
+    state.grid[row + dr * i][col + dc * i] = normalized[i];
+  }
+
+  wordObj.placed = true;
+  wordObj.row = row;
+  wordObj.col = col;
+  wordObj.direction = direction;
+}
+
+// Remove a word from the grid
+function removeWord(wordObj) {
+  if (!wordObj.placed) return;
+
+  const normalized = normalizeWord(wordObj.word);
+  const dr = wordObj.direction === 'vertical' ? 1 : 0;
+  const dc = wordObj.direction === 'horizontal' ? 1 : 0;
+
+  // Collect cells this word occupies
+  const cells = [];
+  for (let i = 0; i < normalized.length; i++) {
+    cells.push({ r: wordObj.row + dr * i, c: wordObj.col + dc * i });
+  }
+
+  // Check which cells are shared with other placed words
+  const sharedCells = new Set();
+  for (const other of state.words) {
+    if (other.id === wordObj.id || !other.placed) continue;
+    const oNorm = normalizeWord(other.word);
+    const oDr = other.direction === 'vertical' ? 1 : 0;
+    const oDc = other.direction === 'horizontal' ? 1 : 0;
+    for (let i = 0; i < oNorm.length; i++) {
+      const key = `${other.row + oDr * i},${other.col + oDc * i}`;
+      for (const cell of cells) {
+        if (`${cell.r},${cell.c}` === key) {
+          sharedCells.add(key);
+        }
+      }
+    }
+  }
+
+  // Clear non-shared cells
+  for (const cell of cells) {
+    const key = `${cell.r},${cell.c}`;
+    if (!sharedCells.has(key)) {
+      state.grid[cell.r][cell.c] = null;
+    }
+  }
+
+  wordObj.placed = false;
+  wordObj.row = null;
+  wordObj.col = null;
+  wordObj.direction = null;
+}
+
+// ============================================================
+// AUTO-PLACEMENT ALGORITHM
+// ============================================================
+
+function findAllPlacements(word, grid) {
+  const normalized = normalizeWord(word);
+  const rows = grid.length;
+  const cols = grid[0].length;
+  const placements = [];
+
+  for (const direction of ['horizontal', 'vertical']) {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const result = canPlace(word, r, c, direction, grid);
+        if (result.valid) {
+          placements.push({
+            row: r,
+            col: c,
+            direction,
+            intersections: result.intersections,
+          });
+        }
+      }
+    }
+  }
+
+  return placements;
+}
+
+function scorePlacement(placement, grid, rows, cols) {
+  // Prefer more intersections, then prefer positions closer to center
+  const centerR = rows / 2;
+  const centerC = cols / 2;
+  const distFromCenter = Math.abs(placement.row - centerR) + Math.abs(placement.col - centerC);
+  const maxDist = centerR + centerC;
+
+  // Primary: intersections (heavily weighted), Secondary: closeness to center
+  return placement.intersections * 100 + (maxDist - distFromCenter);
+}
+
+function autoPlaceAll() {
+  // Reset grid and all placements
+  state.grid = createEmptyGrid(state.rows, state.cols);
+  for (const w of state.words) {
+    w.placed = false;
+    w.row = null;
+    w.col = null;
+    w.direction = null;
+  }
+
+  // Sort words: longest first
+  const sorted = [...state.words].sort((a, b) => b.word.length - a.word.length);
+
+  if (sorted.length === 0) {
+    setStatus('No words to place.', 'error');
+    return;
+  }
+
+  let placedCount = 0;
+
+  // Place first word at center
+  const first = sorted[0];
+  const startRow = Math.floor(state.rows / 2);
+  const startCol = Math.max(0, Math.floor((state.cols - first.word.length) / 2));
+  const firstResult = canPlace(first.word, startRow, startCol, 'horizontal');
+
+  if (firstResult.valid) {
+    placeWord(first, startRow, startCol, 'horizontal');
+    placedCount++;
+  }
+
+  // Place remaining words
+  for (let i = 1; i < sorted.length; i++) {
+    const word = sorted[i];
+    const placements = findAllPlacements(word.word, state.grid);
+
+    if (placements.length === 0) continue;
+
+    // Score and sort placements
+    placements.sort((a, b) => {
+      return scorePlacement(b, state.grid, state.rows, state.cols)
+        - scorePlacement(a, state.grid, state.rows, state.cols);
+    });
+
+    // Prefer placements with intersections
+    const withIntersections = placements.filter(p => p.intersections > 0);
+    const best = withIntersections.length > 0 ? withIntersections[0] : placements[0];
+
+    placeWord(word, best.row, best.col, best.direction);
+    placedCount++;
+  }
+
+  const total = sorted.length;
+  if (placedCount === total) {
+    setStatus(`Auto-placed all ${total} words successfully!`, 'success');
+  } else {
+    setStatus(`Placed ${placedCount} of ${total} words. ${total - placedCount} could not be placed (grid may be too small).`, 'error');
+  }
+
+  state.suggestions = [];
+  renderGrid();
+  renderWordList();
+}
+
+function suggestPlacement() {
+  const wordObj = state.words.find(w => w.id === state.selectedWordId);
+  if (!wordObj) return;
+  if (wordObj.placed) {
+    setStatus('This word is already placed. Remove it first to see suggestions.', 'error');
+    return;
+  }
+
+  const placements = findAllPlacements(wordObj.word, state.grid);
+
+  if (placements.length === 0) {
+    setStatus(`No valid placements found for "${wordObj.word}". Try a larger grid or remove some words.`, 'error');
+    state.suggestions = [];
+    renderGrid();
+    return;
+  }
+
+  // Score and sort
+  placements.sort((a, b) => {
+    return scorePlacement(b, state.grid, state.rows, state.cols)
+      - scorePlacement(a, state.grid, state.rows, state.cols);
+  });
+
+  // Show top suggestions (up to 5 best distinct positions)
+  const topSuggestions = placements.slice(0, 5);
+  state.suggestions = topSuggestions;
+
+  setStatus(`Found ${placements.length} valid positions for "${wordObj.word}". Showing top ${topSuggestions.length}. Click a highlighted cell to place.`, 'success');
+  renderGrid();
+}
+
+// ============================================================
+// UI RENDERING
+// ============================================================
+
+function renderGrid() {
+  const gridEl = document.getElementById('crosswordGrid');
+  gridEl.style.gridTemplateColumns = `repeat(${state.cols}, var(--cell-size))`;
+  gridEl.style.gridTemplateRows = `repeat(${state.rows}, var(--cell-size))`;
+  gridEl.innerHTML = '';
+
+  // Build number map for placed words (sorted by position)
+  const numberMap = {};
+  let num = 1;
+  const placedWords = state.words.filter(w => w.placed)
+    .sort((a, b) => a.row !== b.row ? a.row - b.row : a.col - b.col);
+
+  for (const w of placedWords) {
+    const key = `${w.row},${w.col}`;
+    if (!numberMap[key]) {
+      numberMap[key] = num++;
+    }
+  }
+
+  // Build suggestion map
+  const suggestionCells = new Set();
+  for (const s of state.suggestions) {
+    const normalized = normalizeWord(state.words.find(w => w.id === state.selectedWordId)?.word || '');
+    const dr = s.direction === 'vertical' ? 1 : 0;
+    const dc = s.direction === 'horizontal' ? 1 : 0;
+    for (let i = 0; i < normalized.length; i++) {
+      suggestionCells.add(`${s.row + dr * i},${s.col + dc * i}`);
+    }
+  }
+
+  for (let r = 0; r < state.rows; r++) {
+    for (let c = 0; c < state.cols; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'grid-cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      const letter = state.grid[r][c];
+      if (letter) {
+        cell.classList.add('filled');
+        cell.textContent = letter;
+      } else {
+        cell.classList.add('empty');
+      }
+
+      // Add cell number
+      const key = `${r},${c}`;
+      if (numberMap[key]) {
+        const numSpan = document.createElement('span');
+        numSpan.className = 'cell-number';
+        numSpan.textContent = numberMap[key];
+        cell.appendChild(numSpan);
+        if (letter) {
+          // Re-add letter as centered text after number span
+          const letterSpan = document.createElement('span');
+          letterSpan.textContent = letter;
+          cell.textContent = '';
+          cell.appendChild(numSpan);
+          cell.appendChild(letterSpan);
+        }
+      }
+
+      // Suggestion highlight
+      if (suggestionCells.has(key)) {
+        cell.classList.add('suggestion');
+      }
+
+      cell.addEventListener('mouseenter', (e) => onCellHover(r, c, e));
+      cell.addEventListener('mouseleave', () => clearPreview());
+      cell.addEventListener('click', () => onCellClick(r, c));
+
+      gridEl.appendChild(cell);
+    }
+  }
+}
+
+function renderWordList() {
+  const list = document.getElementById('wordList');
+  const emptyMsg = document.getElementById('emptyListMsg');
+  const countEl = document.getElementById('wordCount');
+
+  list.innerHTML = '';
+
+  if (state.words.length === 0) {
+    list.innerHTML = '<li class="empty-list">No words added yet. Add some German words above!</li>';
+    countEl.textContent = '0 words';
+    return;
+  }
+
+  const placed = state.words.filter(w => w.placed).length;
+  countEl.textContent = `${state.words.length} words (${placed} placed)`;
+
+  for (const w of state.words) {
+    const li = document.createElement('li');
+    li.className = w.id === state.selectedWordId ? 'selected' : '';
+    li.onclick = (e) => {
+      if (e.target.closest('.word-actions')) return;
+      selectWord(w.id);
+    };
+
+    const status = document.createElement('span');
+    status.className = 'word-status ' + (w.placed ? 'placed' : 'unplaced');
+    status.title = w.placed ? `Placed at (${w.row},${w.col}) ${w.direction}` : 'Not placed';
+
+    const text = document.createElement('span');
+    text.className = 'word-text';
+    text.textContent = w.word;
+
+    const hint = document.createElement('span');
+    hint.className = 'word-hint';
+    hint.textContent = w.hint;
+    hint.title = w.hint;
+
+    const actions = document.createElement('span');
+    actions.className = 'word-actions';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = 'x';
+    removeBtn.title = 'Remove word';
+    removeBtn.onclick = () => deleteWord(w.id);
+
+    actions.appendChild(removeBtn);
+
+    li.appendChild(status);
+    li.appendChild(text);
+    li.appendChild(hint);
+    li.appendChild(actions);
+    list.appendChild(li);
+  }
+
+  updateSelectedWordPanel();
+}
+
+function updateSelectedWordPanel() {
+  const info = document.getElementById('selectedWordInfo');
+  const suggestBtn = document.getElementById('suggestBtn');
+  const removeGridBtn = document.getElementById('removeFromGridBtn');
+
+  const wordObj = state.words.find(w => w.id === state.selectedWordId);
+  if (!wordObj) {
+    info.textContent = 'Select a word from the list to place it on the grid.';
+    suggestBtn.disabled = true;
+    removeGridBtn.disabled = true;
+    return;
+  }
+
+  if (wordObj.placed) {
+    info.innerHTML = `<strong>${wordObj.word}</strong> - placed at (${wordObj.row}, ${wordObj.col}), ${wordObj.direction}`;
+    suggestBtn.disabled = true;
+    removeGridBtn.disabled = false;
+  } else {
+    info.innerHTML = `<strong>${wordObj.word}</strong> - not placed. Click on the grid or use "Suggest Placement".`;
+    suggestBtn.disabled = false;
+    removeGridBtn.disabled = true;
+  }
+}
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+
+function addWord() {
+  const wordInput = document.getElementById('wordInput');
+  const hintInput = document.getElementById('hintInput');
+  const word = wordInput.value.trim();
+  const hint = hintInput.value.trim();
+
+  if (!word) {
+    setStatus('Please enter a German word.', 'error');
+    return;
+  }
+
+  if (!hint) {
+    setStatus('Please enter a hint/clue for the word.', 'error');
+    return;
+  }
+
+  // Check for duplicates
+  if (state.words.some(w => normalizeWord(w.word) === normalizeWord(word))) {
+    setStatus(`"${word}" is already in the list.`, 'error');
+    return;
+  }
+
+  // Validate: only letters (including German special characters)
+  if (!/^[a-zA-ZäöüÄÖÜß]+$/.test(word)) {
+    setStatus('Word must contain only letters (including umlauts and sharp s).', 'error');
+    return;
+  }
+
+  state.words.push({
+    id: state.nextId++,
+    word: word,
+    hint: hint,
+    placed: false,
+    row: null,
+    col: null,
+    direction: null,
+  });
+
+  wordInput.value = '';
+  hintInput.value = '';
+  wordInput.focus();
+
+  setStatus(`Added "${word}" to the word list.`, 'success');
+  renderWordList();
+}
+
+function deleteWord(id) {
+  const wordObj = state.words.find(w => w.id === id);
+  if (!wordObj) return;
+
+  if (wordObj.placed) {
+    removeWord(wordObj);
+    renderGrid();
+  }
+
+  state.words = state.words.filter(w => w.id !== id);
+
+  if (state.selectedWordId === id) {
+    state.selectedWordId = null;
+    state.suggestions = [];
+  }
+
+  setStatus(`Removed "${wordObj.word}" from the word list.`);
+  renderWordList();
+  renderGrid();
+}
+
+function selectWord(id) {
+  state.selectedWordId = id;
+  state.suggestions = [];
+  renderWordList();
+  renderGrid();
+}
+
+function setOrientation(dir) {
+  state.orientation = dir;
+  document.getElementById('orientH').classList.toggle('active', dir === 'horizontal');
+  document.getElementById('orientV').classList.toggle('active', dir === 'vertical');
+}
+
+function onCellHover(row, col) {
+  clearPreview();
+
+  const wordObj = state.words.find(w => w.id === state.selectedWordId);
+  if (!wordObj || wordObj.placed) return;
+
+  const normalized = normalizeWord(wordObj.word);
+  const direction = state.orientation;
+  const dr = direction === 'vertical' ? 1 : 0;
+  const dc = direction === 'horizontal' ? 1 : 0;
+
+  const result = canPlace(wordObj.word, row, col, direction);
+  const className = result.valid ? 'preview-valid' : 'preview-invalid';
+
+  for (let i = 0; i < normalized.length; i++) {
+    const r = row + dr * i;
+    const c = col + dc * i;
+    if (r < state.rows && c < state.cols) {
+      const cell = document.querySelector(`.grid-cell[data-row="${r}"][data-col="${c}"]`);
+      if (cell) cell.classList.add(className);
+    }
+  }
+}
+
+function clearPreview() {
+  document.querySelectorAll('.grid-cell.preview-valid, .grid-cell.preview-invalid').forEach(el => {
+    el.classList.remove('preview-valid', 'preview-invalid');
+  });
+}
+
+function onCellClick(row, col) {
+  const wordObj = state.words.find(w => w.id === state.selectedWordId);
+  if (!wordObj) {
+    setStatus('Select a word from the list first, then click the grid to place it.', 'error');
+    return;
+  }
+
+  if (wordObj.placed) {
+    setStatus(`"${wordObj.word}" is already placed. Remove it first to reposition.`, 'error');
+    return;
+  }
+
+  // Check if clicking on a suggestion
+  if (state.suggestions.length > 0) {
+    // Find which suggestion this cell belongs to
+    for (const s of state.suggestions) {
+      const normalized = normalizeWord(wordObj.word);
+      const dr = s.direction === 'vertical' ? 1 : 0;
+      const dc = s.direction === 'horizontal' ? 1 : 0;
+      for (let i = 0; i < normalized.length; i++) {
+        if (s.row + dr * i === row && s.col + dc * i === col) {
+          // Place at this suggestion
+          placeWord(wordObj, s.row, s.col, s.direction);
+          state.suggestions = [];
+          setStatus(`Placed "${wordObj.word}" at (${s.row}, ${s.col}), ${s.direction}.`, 'success');
+          renderGrid();
+          renderWordList();
+          return;
+        }
+      }
+    }
+  }
+
+  // Normal placement
+  const direction = state.orientation;
+  const result = canPlace(wordObj.word, row, col, direction);
+
+  if (!result.valid) {
+    setStatus(`Cannot place "${wordObj.word}" here: ${result.reason}`, 'error');
+    return;
+  }
+
+  placeWord(wordObj, row, col, direction);
+  state.suggestions = [];
+  setStatus(`Placed "${wordObj.word}" at (${row}, ${col}), ${direction}. ${result.intersections} intersection(s).`, 'success');
+  renderGrid();
+  renderWordList();
+}
+
+function removeFromGrid() {
+  const wordObj = state.words.find(w => w.id === state.selectedWordId);
+  if (!wordObj || !wordObj.placed) return;
+
+  removeWord(wordObj);
+  setStatus(`Removed "${wordObj.word}" from the grid.`, 'success');
+  renderGrid();
+  renderWordList();
+}
+
+function resizeGrid() {
+  const newRows = parseInt(document.getElementById('gridRows').value) || 15;
+  const newCols = parseInt(document.getElementById('gridCols').value) || 15;
+
+  if (newRows < 5 || newCols < 5 || newRows > 30 || newCols > 30) {
+    setStatus('Grid size must be between 5 and 30.', 'error');
+    return;
+  }
+
+  // Check if any placed words would be out of bounds
+  const outOfBounds = state.words.filter(w => {
+    if (!w.placed) return false;
+    const norm = normalizeWord(w.word);
+    const dr = w.direction === 'vertical' ? 1 : 0;
+    const dc = w.direction === 'horizontal' ? 1 : 0;
+    const endR = w.row + dr * (norm.length - 1);
+    const endC = w.col + dc * (norm.length - 1);
+    return endR >= newRows || endC >= newCols;
+  });
+
+  if (outOfBounds.length > 0) {
+    setStatus(`Cannot resize: ${outOfBounds.length} word(s) would be out of bounds. Remove them first.`, 'error');
+    return;
+  }
+
+  // Create new grid and copy existing data
+  const newGrid = createEmptyGrid(newRows, newCols);
+  for (let r = 0; r < Math.min(state.rows, newRows); r++) {
+    for (let c = 0; c < Math.min(state.cols, newCols); c++) {
+      newGrid[r][c] = state.grid[r][c];
+    }
+  }
+
+  state.rows = newRows;
+  state.cols = newCols;
+  state.grid = newGrid;
+
+  setStatus(`Grid resized to ${newRows} x ${newCols}.`, 'success');
+  renderGrid();
+}
+
+function clearGrid() {
+  state.grid = createEmptyGrid(state.rows, state.cols);
+  for (const w of state.words) {
+    w.placed = false;
+    w.row = null;
+    w.col = null;
+    w.direction = null;
+  }
+  state.suggestions = [];
+  setStatus('Grid cleared. All words removed from the grid.', 'success');
+  renderGrid();
+  renderWordList();
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+
+function buildExportData() {
+  const placedWords = state.words.filter(w => w.placed);
+
+  // Assign clue numbers
+  const numbered = [];
+  let num = 1;
+  const assigned = {};
+
+  const sorted = [...placedWords].sort((a, b) => a.row !== b.row ? a.row - b.row : a.col - b.col);
+
+  for (const w of sorted) {
+    const key = `${w.row},${w.col}`;
+    if (!assigned[key]) {
+      assigned[key] = num++;
+    }
+    numbered.push({
+      number: assigned[key],
+      word: w.word,
+      hint: w.hint,
+      row: w.row,
+      col: w.col,
+      direction: w.direction,
+      length: w.word.length,
+    });
+  }
+
+  // Build compact grid (only the used area)
+  const gridData = [];
+  for (let r = 0; r < state.rows; r++) {
+    const row = [];
+    for (let c = 0; c < state.cols; c++) {
+      row.push(state.grid[r][c] || '');
+    }
+    gridData.push(row);
+  }
+
+  const across = numbered.filter(w => w.direction === 'horizontal');
+  const down = numbered.filter(w => w.direction === 'vertical');
+
+  return {
+    metadata: {
+      title: 'German Crossword',
+      gridSize: { rows: state.rows, cols: state.cols },
+      totalWords: placedWords.length,
+      createdAt: new Date().toISOString(),
+    },
+    grid: gridData,
+    clues: {
+      across: across.map(w => ({
+        number: w.number,
+        hint: w.hint,
+        answer: w.word,
+        row: w.row,
+        col: w.col,
+        length: w.length,
+      })),
+      down: down.map(w => ({
+        number: w.number,
+        hint: w.hint,
+        answer: w.word,
+        row: w.row,
+        col: w.col,
+        length: w.length,
+      })),
+    },
+    // Also include all words (placed and unplaced) for reference
+    allWords: state.words.map(w => ({
+      word: w.word,
+      hint: w.hint,
+      placed: w.placed,
+    })),
+  };
+}
+
+function exportJSON() {
+  const data = buildExportData();
+  const json = JSON.stringify(data, null, 2);
+
+  document.getElementById('exportContent').textContent = json;
+  document.getElementById('exportModal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('exportModal').classList.remove('active');
+}
+
+function copyExport() {
+  const text = document.getElementById('exportContent').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    setStatus('Crossword JSON copied to clipboard!', 'success');
+  }).catch(() => {
+    setStatus('Failed to copy. Please select and copy manually.', 'error');
+  });
+}
+
+function downloadExport() {
+  const text = document.getElementById('exportContent').textContent;
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'crossword.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  setStatus('Crossword JSON downloaded!', 'success');
+}
+
+// ============================================================
+// STATUS BAR
+// ============================================================
+
+function setStatus(msg, type) {
+  const bar = document.getElementById('statusBar');
+  bar.textContent = msg;
+  bar.className = 'status-bar';
+  if (type) bar.classList.add(type);
+}
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+
+document.addEventListener('keydown', (e) => {
+  // Enter in word/hint inputs -> add word
+  if ((e.target.id === 'wordInput' || e.target.id === 'hintInput') && e.key === 'Enter') {
+    addWord();
+    return;
+  }
+
+  // Tab to toggle orientation (when not in an input)
+  if (e.key === 'Tab' && !e.target.matches('input, textarea, select')) {
+    e.preventDefault();
+    setOrientation(state.orientation === 'horizontal' ? 'vertical' : 'horizontal');
+    return;
+  }
+
+  // Escape to deselect word
+  if (e.key === 'Escape') {
+    state.selectedWordId = null;
+    state.suggestions = [];
+    renderWordList();
+    renderGrid();
+    closeModal();
+    return;
+  }
+});
+
+// ============================================================
+// INIT
+// ============================================================
+
+initGrid();
+renderGrid();
+renderWordList();
+</script>
+</body>
+</html>
