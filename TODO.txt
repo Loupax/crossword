@@ -1,0 +1,24 @@
+# TODO — German Crossword Creator
+Last updated: 2026-03-11
+
+## In Progress
+(nothing currently in progress)
+
+## Backlog
+
+### Feature: Browser State Persistence (localStorage)
+- [ ] Write a saveState() function that serializes state.rows, state.cols, state.words, and state.nextId to localStorage under a fixed key (e.g. "crossword_state")
+- [ ] Reconstruct the full 2D grid from the saved words on load (re-run placement data) rather than storing the raw grid array, to keep storage compact
+- [ ] Call saveState() after every mutation: addWord, deleteWord, placeWord, removeWord, resizeGrid, clearGrid, autoPlaceAll
+- [ ] Write a loadState() function that reads from localStorage, validates the shape, and restores state before initGrid/renderGrid/renderWordList
+- [ ] Add a "Reset / Start Over" button (or confirm-prompt inside clearGrid) so users have a deliberate way to wipe persisted state
+
+### Feature: Standalone HTML Export (Playable Puzzle)
+- [ ] Design the player UI: interactive grid where players type letters, a clue list (Across / Down), and a "Check Answers" button — all inline HTML/CSS/JS
+- [ ] Build a generatePlayerHTML(exportData) function in the creator that inlines the puzzle JSON (from buildExportData()) and the full player UI into a single self-contained HTML string
+- [ ] Wire up player interactivity: clicking a cell selects the word, keyboard input fills cells, Backspace clears a cell, arrow keys or second-click toggle Across/Down
+- [ ] Implement "Check Answers" in the player: compare filled letters against the answer key embedded in the HTML, highlight correct/incorrect cells
+- [ ] Add an "Export Puzzle HTML" button to the creator header that triggers download of the generated HTML file (no external dependencies, no server required)
+
+## Completed
+(nothing completed yet)
