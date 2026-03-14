@@ -130,6 +130,22 @@
     box-shadow: 0 0 0 3px rgba(58, 124, 184, 0.15);
   }
 
+  .input-group textarea {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.2s;
+  }
+
+  .input-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(58, 124, 184, 0.15);
+  }
+
   .btn {
     padding: 8px 16px;
     border: none;
@@ -517,6 +533,7 @@
     <button class="btn btn-accent" onclick="autoPlaceAll()">Auto-place All</button>
     <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="exportJSON()">Export JSON</button>
     <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="clearGrid()">Clear Grid</button>
+    <button class="btn btn-danger" onclick="clearEverything()">Clear Everything</button>
   </div>
 </header>
 
@@ -537,6 +554,19 @@
           <input type="text" id="hintInput" placeholder="e.g. A beautiful insect that flies" autocomplete="off" spellcheck="true">
         </div>
         <button class="btn btn-primary btn-block" onclick="addWord()">Add Word</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>Import CSV</span>
+      </div>
+      <div class="panel-body">
+        <div class="input-group">
+          <label for="csvInput">Paste CSV (word,clue per line)</label>
+          <textarea id="csvInput" rows="5" placeholder="Hund,A loyal pet&#10;Katze,A furry feline&#10;Vogel,It can fly" spellcheck="false"></textarea>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="importCSV()">Import Words</button>
       </div>
     </div>
 
@@ -882,6 +912,7 @@ function autoPlaceAll() {
   state.suggestions = [];
   renderGrid();
   renderWordList();
+  saveState();
 }
 
 function suggestPlacement() {
@@ -1125,6 +1156,78 @@ function addWord() {
 
   setStatus(`Added "${word}" to the word list.`, 'success');
   renderWordList();
+  saveState();
+}
+
+function importCSV() {
+  const textarea = document.getElementById('csvInput');
+  const raw = textarea.value.trim();
+
+  if (!raw) {
+    setStatus('Please paste CSV content into the textarea.', 'error');
+    return;
+  }
+
+  const lines = raw.split(/\r?\n/).filter(line => line.trim() !== '');
+  let imported = 0;
+  let skipped = 0;
+
+  for (const line of lines) {
+    // Split on the first comma only so clues can contain commas
+    const commaIndex = line.indexOf(',');
+    if (commaIndex === -1) {
+      skipped++;
+      continue;
+    }
+
+    const word = line.substring(0, commaIndex).trim();
+    const hint = line.substring(commaIndex + 1).trim();
+
+    if (!word || !hint) {
+      skipped++;
+      continue;
+    }
+
+    // Validate word characters (same regex as addWord)
+    if (!/^[a-zA-ZäöüÄÖÜß]+$/.test(word)) {
+      skipped++;
+      continue;
+    }
+
+    // Check for duplicates against existing words
+    if (state.words.some(w => normalizeWord(w.word) === normalizeWord(word))) {
+      skipped++;
+      continue;
+    }
+
+    state.words.push({
+      id: state.nextId++,
+      word: word,
+      hint: hint,
+      placed: false,
+      row: null,
+      col: null,
+      direction: null,
+    });
+    imported++;
+  }
+
+  // Build status message
+  let msg = `Imported ${imported} word(s)`;
+  if (skipped > 0) {
+    msg += `, skipped ${skipped}`;
+  }
+  msg += '.';
+
+  if (imported > 0) {
+    textarea.value = '';
+    setStatus(msg, 'success');
+  } else {
+    setStatus(msg + ' No valid words found.', 'error');
+  }
+
+  renderWordList();
+  saveState();
 }
 
 function deleteWord(id) {
@@ -1146,6 +1249,7 @@ function deleteWord(id) {
   setStatus(`Removed "${wordObj.word}" from the word list.`);
   renderWordList();
   renderGrid();
+  saveState();
 }
 
 function selectWord(id) {
@@ -1153,12 +1257,14 @@ function selectWord(id) {
   state.suggestions = [];
   renderWordList();
   renderGrid();
+  // selectedWordId is transient UI state, no saveState() needed
 }
 
 function setOrientation(dir) {
   state.orientation = dir;
   document.getElementById('orientH').classList.toggle('active', dir === 'horizontal');
   document.getElementById('orientV').classList.toggle('active', dir === 'vertical');
+  saveState();
 }
 
 function onCellHover(row, col) {
@@ -1218,6 +1324,7 @@ function onCellClick(row, col) {
           setStatus(`Placed "${wordObj.word}" at (${s.row}, ${s.col}), ${s.direction}.`, 'success');
           renderGrid();
           renderWordList();
+          saveState();
           return;
         }
       }
@@ -1238,6 +1345,7 @@ function onCellClick(row, col) {
   setStatus(`Placed "${wordObj.word}" at (${row}, ${col}), ${direction}. ${result.intersections} intersection(s).`, 'success');
   renderGrid();
   renderWordList();
+  saveState();
 }
 
 function removeFromGrid() {
@@ -1248,6 +1356,7 @@ function removeFromGrid() {
   setStatus(`Removed "${wordObj.word}" from the grid.`, 'success');
   renderGrid();
   renderWordList();
+  saveState();
 }
 
 function resizeGrid() {
@@ -1289,6 +1398,7 @@ function resizeGrid() {
 
   setStatus(`Grid resized to ${newRows} x ${newCols}.`, 'success');
   renderGrid();
+  saveState();
 }
 
 function clearGrid() {
@@ -1303,6 +1413,7 @@ function clearGrid() {
   setStatus('Grid cleared. All words removed from the grid.', 'success');
   renderGrid();
   renderWordList();
+  saveState();
 }
 
 // ============================================================
@@ -1428,6 +1539,83 @@ function setStatus(msg, type) {
 }
 
 // ============================================================
+// LOCAL STORAGE PERSISTENCE
+// ============================================================
+
+const STORAGE_KEY = 'crossword-creator-state';
+const STATE_VERSION = 1;
+
+function saveState() {
+  try {
+    const toSave = {
+      version: STATE_VERSION,
+      rows: state.rows,
+      cols: state.cols,
+      grid: state.grid,
+      words: state.words,
+      nextId: state.nextId,
+      orientation: state.orientation,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch (e) {
+    // Silently fail — localStorage may be full or unavailable
+  }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+
+    const saved = JSON.parse(raw);
+    if (!saved || saved.version !== STATE_VERSION) return false;
+
+    // Validate basic structure
+    if (!Array.isArray(saved.grid) || !Array.isArray(saved.words)) return false;
+    if (typeof saved.rows !== 'number' || typeof saved.cols !== 'number') return false;
+
+    state.rows = saved.rows;
+    state.cols = saved.cols;
+    state.grid = saved.grid;
+    state.words = saved.words;
+    state.nextId = saved.nextId || 1;
+    state.orientation = saved.orientation || 'horizontal';
+    state.selectedWordId = null;
+    state.suggestions = [];
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function clearEverything() {
+  if (!confirm('Are you sure you want to clear everything? This will remove all words, the grid, and all saved data.')) {
+    return;
+  }
+
+  localStorage.removeItem(STORAGE_KEY);
+
+  state.rows = 15;
+  state.cols = 15;
+  state.grid = createEmptyGrid(15, 15);
+  state.words = [];
+  state.nextId = 1;
+  state.selectedWordId = null;
+  state.orientation = 'horizontal';
+  state.suggestions = [];
+
+  // Reset UI inputs
+  document.getElementById('gridRows').value = 15;
+  document.getElementById('gridCols').value = 15;
+  setOrientation('horizontal');
+
+  setStatus('Everything cleared. Starting fresh!', 'success');
+  renderGrid();
+  renderWordList();
+}
+
+// ============================================================
 // KEYBOARD SHORTCUTS
 // ============================================================
 
@@ -1460,7 +1648,15 @@ document.addEventListener('keydown', (e) => {
 // INIT
 // ============================================================
 
-initGrid();
+if (!loadState()) {
+  initGrid();
+}
+
+// Sync UI controls with loaded state
+document.getElementById('gridRows').value = state.rows;
+document.getElementById('gridCols').value = state.cols;
+setOrientation(state.orientation);
+
 renderGrid();
 renderWordList();
 </script>
