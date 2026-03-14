@@ -536,6 +536,7 @@
     </select>
     <button class="btn btn-accent" onclick="autoPlaceAll()">Auto-place All</button>
     <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="exportJSON()">Export JSON</button>
+    <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="openPlayer()">Spielen ↗</button>
     <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="clearGrid()">Clear Grid</button>
     <button class="btn btn-danger" onclick="clearEverything()">Clear Everything</button>
   </div>
@@ -1824,6 +1825,17 @@ function exportJSON() {
 
   document.getElementById('exportContent').textContent = json;
   document.getElementById('exportModal').classList.add('active');
+}
+
+function openPlayer() {
+  const placed = state.words.filter(w => w.placed);
+  if (placed.length === 0) {
+    alert('Keine platzierten Wörter. Bitte zuerst Wörter im Raster platzieren.');
+    return;
+  }
+  const data = buildExportData();
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  window.open('player.html?data=' + encoded, '_blank');
 }
 
 function closeModal() {
