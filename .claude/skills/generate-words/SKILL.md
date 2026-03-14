@@ -1,6 +1,6 @@
 ---
 name: generate-words
-description: Generate German vocabulary words with English clues for crossword import, at specified CEFR levels
+description: Generate German vocabulary words with German clues for crossword import, at specified CEFR levels
 ---
 
 Generate a list of German vocabulary words formatted as CSV for the crossword creator.

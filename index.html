@@ -649,9 +649,12 @@
 // DATA MODEL
 // ============================================================
 
+const DEFAULT_ROWS = 15;
+const DEFAULT_COLS = 15;
+
 let state = {
-  rows: 15,
-  cols: 15,
+  rows: DEFAULT_ROWS,
+  cols: DEFAULT_COLS,
   grid: [],            // 2D array: null = empty, string = letter
   words: [],           // { id, word, hint, placed, row, col, direction }
   nextId: 1,
@@ -1180,8 +1183,14 @@ function importCSV() {
       continue;
     }
 
-    const word = line.substring(0, commaIndex).trim();
-    const hint = line.substring(commaIndex + 1).trim();
+    let word = line.substring(0, commaIndex).trim();
+    if (word.startsWith('"') && word.endsWith('"')) {
+      word = word.slice(1, -1);
+    }
+    let hint = line.substring(commaIndex + 1).trim();
+    if (hint.startsWith('"') && hint.endsWith('"')) {
+      hint = hint.slice(1, -1);
+    }
 
     if (!word || !hint) {
       skipped++;
@@ -1260,11 +1269,11 @@ function selectWord(id) {
   // selectedWordId is transient UI state, no saveState() needed
 }
 
-function setOrientation(dir) {
+function setOrientation(dir, skipSave = false) {
   state.orientation = dir;
   document.getElementById('orientH').classList.toggle('active', dir === 'horizontal');
   document.getElementById('orientV').classList.toggle('active', dir === 'vertical');
-  saveState();
+  if (!skipSave) saveState();
 }
 
 function onCellHover(row, col) {
@@ -1558,7 +1567,7 @@ function saveState() {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch (e) {
-    // Silently fail — localStorage may be full or unavailable
+    console.warn('saveState failed:', e);
   }
 }
 
@@ -1596,9 +1605,9 @@ function clearEverything() {
 
   localStorage.removeItem(STORAGE_KEY);
 
-  state.rows = 15;
-  state.cols = 15;
-  state.grid = createEmptyGrid(15, 15);
+  state.rows = DEFAULT_ROWS;
+  state.cols = DEFAULT_COLS;
+  state.grid = createEmptyGrid(DEFAULT_ROWS, DEFAULT_COLS);
   state.words = [];
   state.nextId = 1;
   state.selectedWordId = null;
@@ -1606,8 +1615,8 @@ function clearEverything() {
   state.suggestions = [];
 
   // Reset UI inputs
-  document.getElementById('gridRows').value = 15;
-  document.getElementById('gridCols').value = 15;
+  document.getElementById('gridRows').value = DEFAULT_ROWS;
+  document.getElementById('gridCols').value = DEFAULT_COLS;
   setOrientation('horizontal');
 
   setStatus('Everything cleared. Starting fresh!', 'success');
@@ -1655,7 +1664,7 @@ if (!loadState()) {
 // Sync UI controls with loaded state
 document.getElementById('gridRows').value = state.rows;
 document.getElementById('gridCols').value = state.cols;
-setOrientation(state.orientation);
+setOrientation(state.orientation, true);
 
 renderGrid();
 renderWordList();
