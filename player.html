@@ -528,8 +528,8 @@ function init() {
     try {
       let json;
       try {
-        // Try base64 first
-        json = atob(dataParam);
+        // Try base64 first (encoded as UTF-8 bytes via encodeURIComponent/btoa)
+        json = decodeURIComponent(atob(dataParam).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
       } catch {
         // Maybe it's URL-encoded JSON
         json = decodeURIComponent(dataParam);
