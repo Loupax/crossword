@@ -674,6 +674,87 @@ function createEmptyGrid(rows, cols) {
   return grid;
 }
 
+function shuffleArray(arr) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function placeWordOnGrid(grid, word, row, col, direction) {
+  const normalized = normalizeWord(word);
+  const dr = direction === 'vertical' ? 1 : 0;
+  const dc = direction === 'horizontal' ? 1 : 0;
+  for (let i = 0; i < normalized.length; i++) {
+    grid[row + dr * i][col + dc * i] = normalized[i];
+  }
+}
+
+function tryPlaceGreedy(wordEntries, rows, cols) {
+  // Returns: { grid, placements: Map<index, {row, col, direction}>, totalIntersections }
+  const grid = createEmptyGrid(rows, cols);
+  const placements = new Map();
+  let totalIntersections = 0;
+
+  if (wordEntries.length === 0) {
+    return { grid, placements, totalIntersections };
+  }
+
+  // Place first word at center, trying both orientations
+  const first = wordEntries[0];
+  const hRow = Math.floor(rows / 2);
+  const hCol = Math.max(0, Math.floor((cols - first.word.length) / 2));
+  const hResult = canPlace(first.word, hRow, hCol, 'horizontal', grid);
+
+  const vRow = Math.max(0, Math.floor((rows - first.word.length) / 2));
+  const vCol = Math.floor(cols / 2);
+  const vResult = canPlace(first.word, vRow, vCol, 'vertical', grid);
+
+  if (hResult.valid) {
+    placeWordOnGrid(grid, first.word, hRow, hCol, 'horizontal');
+    placements.set(first.index, { row: hRow, col: hCol, direction: 'horizontal' });
+    totalIntersections += hResult.intersections;
+  } else if (vResult.valid) {
+    placeWordOnGrid(grid, first.word, vRow, vCol, 'vertical');
+    placements.set(first.index, { row: vRow, col: vCol, direction: 'vertical' });
+    totalIntersections += vResult.intersections;
+  }
+
+  // Place remaining words
+  for (let i = 1; i < wordEntries.length; i++) {
+    const entry = wordEntries[i];
+    const allPlacements = findAllPlacements(entry.word, grid);
+
+    if (allPlacements.length === 0) continue;
+
+    // Compute unplaced words for future-fit scoring
+    const unplacedWords = wordEntries.slice(i + 1).map(e => normalizeWord(e.word));
+    const normalized = normalizeWord(entry.word);
+
+    // Annotate placements with letter info for future-fit scoring
+    const annotated = allPlacements.map(p => ({
+      ...p,
+      wordLength: normalized.length,
+      letters: normalized,
+    }));
+
+    // Pre-compute scores to avoid double calls per sort comparison
+    const scored = annotated.map(p => ({ p, score: scorePlacement(p, grid, rows, cols, unplacedWords) }));
+    scored.sort((a, b) => b.score - a.score);
+
+    // Prefer placements with intersections
+    const best = (scored.find(s => s.p.intersections > 0) ?? scored[0]).p;
+
+    placeWordOnGrid(grid, entry.word, best.row, best.col, best.direction);
+    placements.set(entry.index, { row: best.row, col: best.col, direction: best.direction });
+    totalIntersections += best.intersections;
+  }
+
+  return { grid, placements, totalIntersections };
+}
+
 function initGrid() {
   state.grid = createEmptyGrid(state.rows, state.cols);
 }
@@ -754,14 +835,7 @@ function canPlace(word, row, col, direction, gridOverride) {
 
 // Place a word on the grid
 function placeWord(wordObj, row, col, direction) {
-  const normalized = normalizeWord(wordObj.word);
-  const dr = direction === 'vertical' ? 1 : 0;
-  const dc = direction === 'horizontal' ? 1 : 0;
-
-  for (let i = 0; i < normalized.length; i++) {
-    state.grid[row + dr * i][col + dc * i] = normalized[i];
-  }
-
+  placeWordOnGrid(state.grid, wordObj.word, row, col, direction);
   wordObj.placed = true;
   wordObj.row = row;
   wordObj.col = col;
@@ -842,20 +916,99 @@ function findAllPlacements(word, grid) {
   return placements;
 }
 
-function scorePlacement(placement, grid, rows, cols) {
-  // Prefer more intersections, then prefer positions closer to center
+function scorePlacement(placement, grid, rows, cols, unplacedWords) {
+  // Prefer more intersections, then future connectivity, then closeness to center
   const centerR = rows / 2;
   const centerC = cols / 2;
   const distFromCenter = Math.abs(placement.row - centerR) + Math.abs(placement.col - centerC);
   const maxDist = centerR + centerC;
 
-  // Primary: intersections (heavily weighted), Secondary: closeness to center
-  return placement.intersections * 100 + (maxDist - distFromCenter);
+  // Compute future-fit bonus: how many unplaced words share letters with this placement
+  let futureConnectivity = 0;
+  if (unplacedWords && unplacedWords.length > 0) {
+    const dr = placement.direction === 'vertical' ? 1 : 0;
+    const dc = placement.direction === 'horizontal' ? 1 : 0;
+    const len = placement.wordLength || 0;
+    for (let i = 0; i < len; i++) {
+      const r = placement.row + dr * i;
+      const c = placement.col + dc * i;
+      // Only count letters in empty cells (non-intersection cells offer new connection points)
+      if (grid[r][c] === null) {
+        const letter = placement.letters[i];
+        for (const uw of unplacedWords) {
+          if (uw.includes(letter)) futureConnectivity++;
+        }
+      }
+    }
+    if (futureConnectivity > 50) futureConnectivity = 50;
+  }
+
+  return placement.intersections * 100 + futureConnectivity * 10 + (maxDist - distFromCenter);
 }
 
 function autoPlaceAll() {
-  // Reset grid and all placements
-  state.grid = createEmptyGrid(state.rows, state.cols);
+  const NUM_ATTEMPTS = 50;
+
+  if (state.words.filter(w => w.word && w.word.trim().length > 0).length === 0) {
+    setStatus('No words to place.', 'error');
+    return;
+  }
+
+  // Build word entries with index into state.words (O(n), avoids indexOf)
+  const wordEntries = [];
+  for (let i = 0; i < state.words.length; i++) {
+    const w = state.words[i];
+    if (w.word && w.word.trim().length > 0) {
+      wordEntries.push({ word: w.word, index: i });
+    }
+  }
+
+  // Lazily generate orderings to avoid allocating all 50 arrays upfront
+  function* generateOrderings() {
+    // 1. Longest words first (best anchors)
+    yield [...wordEntries].sort((a, b) => b.word.length - a.word.length);
+    // 2. Shortest words first
+    yield [...wordEntries].sort((a, b) => a.word.length - b.word.length);
+    // 3. Most unique letters first (easiest to intersect)
+    yield [...wordEntries].sort((a, b) => {
+      const distinctA = new Set(normalizeWord(a.word)).size;
+      const distinctB = new Set(normalizeWord(b.word)).size;
+      return distinctB - distinctA;
+    });
+    // 4. Most-constrained last: fewest distinct letters placed last
+    yield [...wordEntries].sort((a, b) => {
+      const distinctA = new Set(normalizeWord(a.word)).size;
+      const distinctB = new Set(normalizeWord(b.word)).size;
+      return distinctA - distinctB;
+    });
+    // 5. Alphabetical (helps German compound words sharing prefixes)
+    yield [...wordEntries].sort((a, b) => a.word.localeCompare(b.word, 'de'));
+    // Remaining: random shuffles
+    for (let i = 5; i < NUM_ATTEMPTS; i++) {
+      yield shuffleArray(wordEntries);
+    }
+  }
+
+  // Run attempts and track the best result
+  let bestResult = null;
+
+  for (const ordering of generateOrderings()) {
+    const result = tryPlaceGreedy(ordering, state.rows, state.cols);
+
+    if (!bestResult
+        || result.placements.size > bestResult.placements.size
+        || (result.placements.size === bestResult.placements.size
+            && result.totalIntersections > bestResult.totalIntersections)) {
+      bestResult = result;
+    }
+
+    // Early exit if all words are placed
+    if (bestResult.placements.size === wordEntries.length) break;
+  }
+
+  // Apply the best result to state
+  state.grid = bestResult.grid;
+
   for (const w of state.words) {
     w.placed = false;
     w.row = null;
@@ -863,53 +1016,21 @@ function autoPlaceAll() {
     w.direction = null;
   }
 
-  // Sort words: longest first
-  const sorted = [...state.words].sort((a, b) => b.word.length - a.word.length);
-
-  if (sorted.length === 0) {
-    setStatus('No words to place.', 'error');
-    return;
+  for (const [idx, placement] of bestResult.placements) {
+    const w = state.words[idx];
+    w.placed = true;
+    w.row = placement.row;
+    w.col = placement.col;
+    w.direction = placement.direction;
   }
 
-  let placedCount = 0;
+  const placedCount = bestResult.placements.size;
+  const total = wordEntries.length;
 
-  // Place first word at center
-  const first = sorted[0];
-  const startRow = Math.floor(state.rows / 2);
-  const startCol = Math.max(0, Math.floor((state.cols - first.word.length) / 2));
-  const firstResult = canPlace(first.word, startRow, startCol, 'horizontal');
-
-  if (firstResult.valid) {
-    placeWord(first, startRow, startCol, 'horizontal');
-    placedCount++;
-  }
-
-  // Place remaining words
-  for (let i = 1; i < sorted.length; i++) {
-    const word = sorted[i];
-    const placements = findAllPlacements(word.word, state.grid);
-
-    if (placements.length === 0) continue;
-
-    // Score and sort placements
-    placements.sort((a, b) => {
-      return scorePlacement(b, state.grid, state.rows, state.cols)
-        - scorePlacement(a, state.grid, state.rows, state.cols);
-    });
-
-    // Prefer placements with intersections
-    const withIntersections = placements.filter(p => p.intersections > 0);
-    const best = withIntersections.length > 0 ? withIntersections[0] : placements[0];
-
-    placeWord(word, best.row, best.col, best.direction);
-    placedCount++;
-  }
-
-  const total = sorted.length;
   if (placedCount === total) {
     setStatus(`Auto-placed all ${total} words successfully!`, 'success');
   } else {
-    setStatus(`Placed ${placedCount} of ${total} words. ${total - placedCount} could not be placed (grid may be too small).`, 'error');
+    setStatus(`Placed ${placedCount} of ${total} words. ${total - placedCount} did not fit.`, 'error');
   }
 
   state.suggestions = [];
