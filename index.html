@@ -1846,25 +1846,7 @@ async function sha256hex(message) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function openPlayer() {
-  const placed = state.words.filter(w => w.placed);
-  if (placed.length === 0) {
-    alert('Keine platzierten Wörter. Bitte zuerst Wörter im Raster platzieren.');
-    return;
-  }
-  const data = buildExportData();
-  const encoded = btoa(encodeURIComponent(JSON.stringify(data)).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode(parseInt(p1, 16))));
-  window.open('player.html?data=' + encoded, '_blank');
-}
-
-async function generatePlayerHTML() {
-  const placed = state.words.filter(w => w.placed);
-  if (placed.length === 0) {
-    alert('Keine platzierten Wörter. Bitte zuerst Wörter platzieren.');
-    return;
-  }
-
-  const exportData = buildExportData();
+async function buildHashedPayload(exportData) {
   const salt = generateSalt();
   const safeClues = { across: [], down: [] };
 
@@ -1882,11 +1864,34 @@ async function generatePlayerHTML() {
     }
   }
 
-  const puzzlePayload = {
+  return {
     metadata: exportData.metadata,
     salt:     salt,
     clues:    safeClues
   };
+}
+
+async function openPlayer() {
+  const placed = state.words.filter(w => w.placed);
+  if (placed.length === 0) {
+    alert('Keine platzierten Wörter. Bitte zuerst Wörter im Raster platzieren.');
+    return;
+  }
+  const data = buildExportData();
+  const puzzlePayload = await buildHashedPayload(data);
+  const encoded = btoa(encodeURIComponent(JSON.stringify(puzzlePayload)).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode(parseInt(p1, 16))));
+  window.open('player.html?data=' + encoded, '_blank');
+}
+
+async function generatePlayerHTML() {
+  const placed = state.words.filter(w => w.placed);
+  if (placed.length === 0) {
+    alert('Keine platzierten Wörter. Bitte zuerst Wörter platzieren.');
+    return;
+  }
+
+  const exportData = buildExportData();
+  const puzzlePayload = await buildHashedPayload(exportData);
 
   let playerSource;
   try {
