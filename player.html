@@ -1140,7 +1140,7 @@ function extractClueAnswer(clue, direction) {
   for (let i = 0; i < clue.length; i++) {
     const r = clue.row + (direction === 'down'   ? i : 0);
     const c = clue.col + (direction === 'across' ? i : 0);
-    answer += (playerGrid[r][c] || '').toUpperCase();
+    answer += (playerGrid[r][c] || ' ').toUpperCase();
   }
   return answer;
 }
@@ -1197,7 +1197,7 @@ async function checkSolutionHashed() {
   for (const direction of ['across', 'down']) {
     for (const clue of puzzle.clues[direction]) {
       const userAnswer = extractClueAnswer(clue, direction);
-      const userHash   = await sha256hex(salt + userAnswer.toUpperCase());
+      const userHash   = await sha256hex(salt + userAnswer);
       const isCorrect  = (userHash === clue.hash);
       totalClues++;
       if (isCorrect) correctClues++;
@@ -1210,7 +1210,7 @@ async function checkSolutionHashed() {
         );
         if (cellEl) {
           cellEl.classList.remove('correct', 'incorrect');
-          if (!userAnswer.includes('')) {
+          if (!userAnswer.includes(' ')) {
             cellEl.classList.add(isCorrect ? 'correct' : 'incorrect');
           }
         }
