@@ -186,6 +186,11 @@
   }
   .btn-outline:hover { background: var(--bg); }
 
+  .btn-header {
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
   .btn-sm {
     padding: 4px 10px;
     font-size: 0.8rem;
@@ -535,8 +540,9 @@
       <option value="dense">Dense (Strict)</option>
     </select>
     <button class="btn btn-accent" onclick="autoPlaceAll()">Auto-place All</button>
-    <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="exportJSON()">Export JSON</button>
-    <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="clearGrid()">Clear Grid</button>
+    <button class="btn btn-outline btn-header" onclick="exportJSON()">Export JSON</button>
+    <button class="btn btn-outline btn-header" onclick="openPlayer()">Spielen ↗</button>
+    <button class="btn btn-outline btn-header" onclick="clearGrid()">Clear Grid</button>
     <button class="btn btn-danger" onclick="clearEverything()">Clear Everything</button>
   </div>
 </header>
@@ -1824,6 +1830,17 @@ function exportJSON() {
 
   document.getElementById('exportContent').textContent = json;
   document.getElementById('exportModal').classList.add('active');
+}
+
+function openPlayer() {
+  const placed = state.words.filter(w => w.placed);
+  if (placed.length === 0) {
+    alert('Keine platzierten Wörter. Bitte zuerst Wörter im Raster platzieren.');
+    return;
+  }
+  const data = buildExportData();
+  const encoded = btoa(encodeURIComponent(JSON.stringify(data)).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode(parseInt(p1, 16))));
+  window.open('player.html?data=' + encoded, '_blank');
 }
 
 function closeModal() {
