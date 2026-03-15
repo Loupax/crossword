@@ -504,7 +504,11 @@
   </div>
 </div>
 
+<!-- __PUZZLE_DATA_INJECTION__ -->
 <script>
+(function () {
+'use strict';
+
 // ============================================================
 // STATE
 // ============================================================
@@ -520,7 +524,19 @@ let checkActive = false;  // Whether check-solution highlights are shown
 // PUZZLE LOADING
 // ============================================================
 
+async function sha256hex(message) {
+  const encoded = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function init() {
+  if (typeof window.__PUZZLE_DATA__ !== 'undefined') {
+    loadPuzzle(window.__PUZZLE_DATA__);
+    return;
+  }
+
   // Check URL ?data= param
   const params = new URLSearchParams(window.location.search);
   const dataParam = params.get('data');
@@ -586,13 +602,16 @@ function hideLoadError() {
 
 function loadPuzzle(data) {
   // Validate minimal structure
-  if (!data.grid || !data.clues || !data.metadata) {
-    showLoadError('Ungültiges Rätselformat: "grid", "clues" und "metadata" werden benötigt.');
+  if (!data.clues || !data.metadata) {
+    showLoadError('Ungültiges Rätselformat: "clues" und "metadata" werden benötigt.');
     return;
   }
   if (!data.clues.across || !data.clues.down) {
     showLoadError('Ungültiges Rätselformat: "clues.across" und "clues.down" werden benötigt.');
     return;
+  }
+  if (!data.grid) {
+    data = Object.assign({}, data, { grid: reconstructGridFromClues(data.clues, data.metadata) });
   }
 
   puzzle = data;
@@ -651,6 +670,24 @@ function loadNewPuzzle() {
 // ============================================================
 // CELL MAP
 // ============================================================
+
+function reconstructGridFromClues(clues, metadata) {
+  const rows = metadata.gridSize.rows;
+  const cols = metadata.gridSize.cols;
+  const grid = Array.from({ length: rows }, () => new Array(cols).fill(''));
+
+  for (const clue of clues.across) {
+    for (let i = 0; i < clue.length; i++) {
+      grid[clue.row][clue.col + i] = '*';
+    }
+  }
+  for (const clue of clues.down) {
+    for (let i = 0; i < clue.length; i++) {
+      grid[clue.row + i][clue.col] = '*';
+    }
+  }
+  return grid;
+}
 
 function buildCellMap() {
   cellMap = new Map();
@@ -1098,13 +1135,29 @@ function setStatus(msg, type) {
   if (type) bar.classList.add(type);
 }
 
+function extractClueAnswer(clue, direction) {
+  let answer = '';
+  for (let i = 0; i < clue.length; i++) {
+    const r = clue.row + (direction === 'down'   ? i : 0);
+    const c = clue.col + (direction === 'across' ? i : 0);
+    answer += (playerGrid[r][c] || '').toUpperCase();
+  }
+  return answer;
+}
+
 // ============================================================
 // CHECK / RESET
 // ============================================================
 
-function checkSolution() {
+async function checkSolution() {
   if (!puzzle) return;
 
+  if (puzzle.salt) {
+    await checkSolutionHashed();
+    return;
+  }
+
+  // Classic mode: cell-by-cell comparison against puzzle.grid
   const rows = puzzle.metadata.gridSize.rows;
   const cols = puzzle.metadata.gridSize.cols;
 
@@ -1136,6 +1189,42 @@ function checkSolution() {
   }
 }
 
+async function checkSolutionHashed() {
+  const salt = puzzle.salt;
+  let totalClues   = 0;
+  let correctClues = 0;
+
+  for (const direction of ['across', 'down']) {
+    for (const clue of puzzle.clues[direction]) {
+      const userAnswer = extractClueAnswer(clue, direction);
+      const userHash   = await sha256hex(salt + userAnswer.toUpperCase());
+      const isCorrect  = (userHash === clue.hash);
+      totalClues++;
+      if (isCorrect) correctClues++;
+
+      for (let i = 0; i < clue.length; i++) {
+        const r = clue.row + (direction === 'down'   ? i : 0);
+        const c = clue.col + (direction === 'across' ? i : 0);
+        const cellEl = document.querySelector(
+          `.grid-cell[data-row="${r}"][data-col="${c}"]`
+        );
+        if (cellEl) {
+          cellEl.classList.remove('correct', 'incorrect');
+          if (!userAnswer.includes('')) {
+            cellEl.classList.add(isCorrect ? 'correct' : 'incorrect');
+          }
+        }
+      }
+    }
+  }
+
+  if (correctClues === totalClues) {
+    setStatus('Herzlichen Glückwunsch! Alle Wörter korrekt! 🎉', 'success');
+  } else {
+    setStatus(`${correctClues} von ${totalClues} Wörtern korrekt.`, 'warning');
+  }
+}
+
 function resetPuzzle() {
   if (!puzzle) return;
   const rows = puzzle.metadata.gridSize.rows;
@@ -1157,7 +1246,16 @@ function resetPuzzle() {
 // INIT
 // ============================================================
 
+// Expose functions referenced by inline event handlers
+window.checkSolution    = checkSolution;
+window.resetPuzzle      = resetPuzzle;
+window.loadNewPuzzle    = loadNewPuzzle;
+window.handleFileUpload = handleFileUpload;
+window.handlePaste      = handlePaste;
+
 init();
+
+})();
 </script>
 </body>
 </html>
