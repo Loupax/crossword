@@ -541,6 +541,7 @@
     </select>
     <button class="btn btn-accent" onclick="autoPlaceAll()">Auto-place All</button>
     <button class="btn btn-outline btn-header" onclick="exportJSON()">Export JSON</button>
+    <button class="btn btn-outline btn-header" onclick="generatePlayerHTML()">Export HTML ↓</button>
     <button class="btn btn-outline btn-header" onclick="openPlayer()">Spielen ↗</button>
     <button class="btn btn-outline btn-header" onclick="clearGrid()">Clear Grid</button>
     <button class="btn btn-danger" onclick="clearEverything()">Clear Everything</button>
@@ -1832,15 +1833,93 @@ function exportJSON() {
   document.getElementById('exportModal').classList.add('active');
 }
 
-function openPlayer() {
+function generateSalt() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256hex(message) {
+  const encoded = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function buildHashedPayload(exportData) {
+  const salt = generateSalt();
+  const safeClues = { across: [], down: [] };
+
+  for (const direction of ['across', 'down']) {
+    for (const clue of exportData.clues[direction]) {
+      const hash = await sha256hex(salt + clue.answer.toUpperCase());
+      safeClues[direction].push({
+        number: clue.number,
+        hint:   clue.hint,
+        row:    clue.row,
+        col:    clue.col,
+        length: clue.length,
+        hash:   hash
+      });
+    }
+  }
+
+  return {
+    metadata: exportData.metadata,
+    salt:     salt,
+    clues:    safeClues
+  };
+}
+
+async function openPlayer() {
   const placed = state.words.filter(w => w.placed);
   if (placed.length === 0) {
     alert('Keine platzierten Wörter. Bitte zuerst Wörter im Raster platzieren.');
     return;
   }
   const data = buildExportData();
-  const encoded = btoa(encodeURIComponent(JSON.stringify(data)).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode(parseInt(p1, 16))));
+  const puzzlePayload = await buildHashedPayload(data);
+  const encoded = btoa(encodeURIComponent(JSON.stringify(puzzlePayload)).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode(parseInt(p1, 16))));
   window.open('player.html?data=' + encoded, '_blank');
+}
+
+async function generatePlayerHTML() {
+  const placed = state.words.filter(w => w.placed);
+  if (placed.length === 0) {
+    alert('Keine platzierten Wörter. Bitte zuerst Wörter platzieren.');
+    return;
+  }
+
+  const exportData = buildExportData();
+  const puzzlePayload = await buildHashedPayload(exportData);
+
+  let playerSource;
+  try {
+    const response = await fetch('player.html');
+    if (!response.ok) throw new Error('Fetch failed: ' + response.status);
+    playerSource = await response.text();
+  } catch (e) {
+    alert('Fehler beim Laden von player.html: ' + e.message);
+    return;
+  }
+
+  const injection = `<script>\nwindow.__PUZZLE_DATA__ = ${JSON.stringify(puzzlePayload)};\n<\/script>\n`;
+  const SENTINEL = '<!-- __PUZZLE_DATA_INJECTION__ -->';
+  if (!playerSource.includes(SENTINEL)) {
+    alert('Fehler: Injektionspunkt in player.html nicht gefunden.');
+    return;
+  }
+  const standaloneHTML = playerSource.replace(SENTINEL, injection + SENTINEL);
+
+  const blob = new Blob([standaloneHTML], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  const title = (exportData.metadata.title || 'kreuzwortratsel')
+                  .replace(/\s+/g, '-').toLowerCase();
+  a.download = title + '.html';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function closeModal() {
