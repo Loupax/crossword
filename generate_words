@@ -1,0 +1,144 @@
+#!/usr/bin/env python3
+
+import os
+import time
+import argparse
+import random
+from google import genai
+from google.genai import types
+
+# 1. Initialize the modern SDK client
+client = genai.Client()
+
+# 2. The Cryptic, Yet Strict System Instruction
+system_instruction = """
+Name: Schwedenrätsel Clue Maker
+
+Purpose and Goals:
+Create highly accurate, ultra-short German crossword clues suitable for a traditional grid (Schwedenrätsel) based on CEFR levels and themes. The hints must be cleverly cryptic, but the vocabulary used in the hints MUST strictly adhere to the requested CEFR Hint Level.
+
+Behaviors and Rules:
+
+1) Grid Compatibility & Spelling (CRITICAL): 
+   - Divide words into 1/3 short (3-4 letters), 1/3 medium (5-7 letters), 1/3 long (8-12 letters). 
+   - Strongly favor answers containing common German intersection letters (E, N, I, S, R, A, T).
+   - All ANSWERS must expand Umlaute and Eszett for a crossword grid (Ä->AE, Ö->OE, Ü->UE, ß->SS). Example: FRÜHLING becomes FRUEHLING.
+
+2) Grammar Matching (CRITICAL):
+   - The part of speech of the hint MUST match the answer.
+   - If the answer is a Noun, the hint must be a Noun phrase (e.g., BAUM,'große Holzpflanze').
+   - If the answer is a Verb, the hint must be an Infinitive Verb phrase (e.g., ARBEITEN,'beruflich tätig sein').
+   - If the answer is an Adjective, the hint must be an Adjective (e.g., TRAURIG,'zutiefst betrübt').
+
+3) Schwedenrätsel Brevity (CRITICAL): 
+   - Hints MUST be 1 to 3 words maximum. DO NOT use articles (der, die, das, ein, eine).
+
+4) CEFR Calibrated Cryptic Tone (CRITICAL): 
+   - Hints must induce a 'productive struggle' through lateral thinking, NOT through advanced dictionary vocabulary. 
+   - The vocabulary used inside the hint MUST strictly match the requested Hint Level. 
+   - Do not use C1/C2 academic compound nouns (like 'Aggregatzustand' or 'Vegetationsperiode') if the requested hint level is A1, A2, or B1.
+   - Create the struggle using simple words creatively (e.g., for DUSCHE at B1: use 'schnelles Stehbad', not 'Körperreinigungskabine').
+
+5) Output Format:
+   - Output ONLY raw CSV text. No markdown, no greetings.
+   - Format: WORD,'Hint'
+6) The "Child/Basic" Definition Rule (NEW):
+
+    To achieve the CEFR level, imagine explaining the word to a 10-year-old or someone with limited vocabulary.
+
+    FORBIDDEN: Avoid words ending in '-wesen', '-stätte', '-träger', '-einheit', or '-gefüge'.
+
+    FORBIDDEN: Avoid Latin/Internationalisms like 'optisch', 'akustisch', 'pharmazeutisch', 'digital', 'urban'. Use German descriptions instead.
+
+    Bad Example (C1): KAMERA, 'optischer Bildfänger'
+
+    Good Example (B1): KAMERA, 'macht Fotos' (Note: matches grammar rule) or 'Gerät für Fotos'.
+
+7) Negative Constraints:
+
+    If you find yourself using a word you would see in a law book or a scientific paper, DELETE it and use a word from a daily conversation.
+"""
+
+# 3. Accept the themes array as a parameter
+def run_bulk_generation(hint_difficulty, batch_size, themes):
+    cefr_levels = ["A1", "A2", "B1"]
+    random.shuffle(themes) 
+    generated_words = set()
+
+    print(f"Starting generation | Hint Level: {hint_difficulty} | Batch Size: {batch_size}")
+    print(f"Themes to process: {themes}\n")
+
+    for level in cefr_levels:
+        current_batch = 1
+        total_batches_per_level = len(themes)
+
+        for theme in themes:
+            safe_theme = theme.replace(" ", "_")
+            output_filename = f"crossword_{safe_theme}_{level}_{hint_difficulty}.csv"
+            
+            with open(output_filename, "a", encoding="utf-8") as file:
+                prompt = f"{batch_size} words, Word Level: {level}, Hint Level: {hint_difficulty}, Theme: {theme}."
+                print(f"[{current_batch}/{total_batches_per_level}] Generating {theme} into {output_filename}...")
+                
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-3.0-flash", 
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            temperature=0.4
+                        )
+                    )
+                    
+                    csv_data = response.text.strip()
+                    
+                    lines = csv_data.split('\n')
+                    valid_lines = []
+                    for line in lines:
+                        if ',' in line:
+                            word = line.split(',')[0].strip().upper()
+                            if word not in generated_words:
+                                generated_words.add(word)
+                                valid_lines.append(line)
+                    
+                    if valid_lines:
+                        file.write('\n'.join(valid_lines) + "\n")
+                        file.flush()
+                        print(f"  -> Success! Saved {len(valid_lines)} unique words.")
+                    else:
+                        print(f"  -> All generated words were duplicates. Skipping write.")
+                        
+                except Exception as e:
+                    print(f"  -> Error generating batch: {e}")
+                
+                time.sleep(4) 
+                current_batch += 1
+
+    print("\nBulk generation complete!")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generate Cryptic German Crossword Clues.")
+    parser.add_argument(
+        "--hint-level", 
+        type=str, 
+        required=True, 
+        help="The CEFR difficulty level for the hints (e.g., A2, B2, C1)."
+    )
+    parser.add_argument(
+        "--batch-size", 
+        type=int, 
+        default=10, 
+        help="The number of words to generate per theme (default: 10)."
+    )
+    # 4. Add the themes argument (nargs='+' allows multiple space-separated inputs)
+    parser.add_argument(
+        "--themes", 
+        nargs="+", 
+        required=True, 
+        help='A list of themes separated by spaces. Enclose multi-word themes in quotes (e.g., "Food and Cooking" Travel).'
+    )
+    
+    args = parser.parse_args()
+    
+    # Pass all three arguments into the main function
+    run_bulk_generation(args.hint_level, args.batch_size, args.themes)

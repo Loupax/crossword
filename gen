@@ -1,0 +1,38 @@
+#/bin/bash
+
+./generate_words \
+  --hint-level B1 \
+  --batch-size 100 \
+  --themes \
+  "Travel" \
+  "Food and Cooking" \
+  "Daily Routine" \
+  "Nature and Weather" \
+  "Emotions" \
+  "Home and Furniture" \
+  "Household Chores" \
+  "Clothing and Fashion" \
+  "Shopping and Money" \
+  "Family and Relationships" \
+  "Professions and Work" \
+  "School and Education" \
+  "Describing People" \
+  "Hobbies and Free Time" \
+  "Sports and Fitness" \
+  "Health and Human Body" \
+  "Holidays and Celebrations" \
+  "City and Infrastructure" \
+  "Public Transport" \
+  "Animals and Pets" \
+  "Time and Calendar" \
+  "Technology and Communication" \
+  "Arts and Culture" \
+  "Media and Entertainment" \
+  "Politics and Society" \
+  "Banking and Post Office" \
+  "Crime and Justice" \
+  "Geography and Countries" \
+  "Environment and Sustainability" \
+  "Science and Space" \
+  "Tools and DIY" \
+  "Senses and Perception"
