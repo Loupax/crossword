@@ -9,8 +9,25 @@ import { CandidateSelector } from './candidate-selector.js'
 import { Grid } from './grid.js'
 import { SimpleEngine } from './strategies/simple.js'
 import { BacktrackEngine } from './strategies/backtrack.js'
+import { TemplateEngine } from './strategies/template.js'
+import { GreedyEngine } from './strategies/greedy.js'
 import { HtmlExporter } from './html-exporter.js'
 import { StateManager } from './state-manager.js'
+
+// --- Duration parsing ---
+// Accepts: '30s', '2m', '5m', or a plain integer string (treated as ms)
+function parseDuration(value) {
+  if (/^\d+s$/.test(value)) {
+    return parseInt(value, 10) * 1000
+  }
+  if (/^\d+m$/.test(value)) {
+    return parseInt(value, 10) * 60 * 1000
+  }
+  if (/^\d+$/.test(value)) {
+    return parseInt(value, 10)
+  }
+  throw new Error(`Invalid --timeout value: '${value}'. Use formats like '30s', '2m', or a plain millisecond integer.`)
+}
 
 // --- Arg parsing ---
 function parseArgs(argv) {
@@ -18,7 +35,9 @@ function parseArgs(argv) {
     strategy: 'backtrack',
     size: 15,
     exclude: 'used_words.txt',
-    outputDir: '.'
+    outputDir: '.',
+    templateFile: null,
+    timeout: '5m'
   }
 
   for (let i = 0; i < argv.length; i++) {
@@ -35,6 +54,12 @@ function parseArgs(argv) {
       case '--output-dir':
         args.outputDir = argv[++i]
         break
+      case '--template-file':
+        args.templateFile = argv[++i]
+        break
+      case '--timeout':
+        args.timeout = argv[++i]
+        break
       case '--help':
       case '-h':
         process.stdout.write(
@@ -43,11 +68,13 @@ function parseArgs(argv) {
           'Reads CSV from stdin: WORD,"HINT"\n' +
           '\n' +
           'Options:\n' +
-          '  --strategy backtrack|simple   Placement strategy (default: backtrack)\n' +
-          '  --size N                      Grid size N×N (default: 15)\n' +
-          '  --exclude path                Path to used-words file (default: used_words.txt)\n' +
-          '  --output-dir path             Output directory (default: .)\n' +
-          '  --help                        Show this help\n'
+          '  --strategy backtrack|simple|greedy|template  Placement strategy (default: backtrack)\n' +
+          '  --size N                             Grid size N×N (default: 15)\n' +
+          '  --exclude path                       Path to used-words file (default: used_words.txt)\n' +
+          '  --output-dir path                    Output directory (default: .)\n' +
+          '  --template-file path                 Template file (required for template strategy)\n' +
+          '  --timeout duration                   Time budget for the engine, e.g. 30s, 2m, 5m, or ms integer (default: 5m)\n' +
+          '  --help                               Show this help\n'
         )
         process.exit(0)
     }
@@ -123,7 +150,21 @@ async function main() {
   const grid = new Grid(args.size)
 
   // 9. Run engine
-  const engine = args.strategy === 'simple' ? new SimpleEngine() : new BacktrackEngine()
+  const timeBudgetMs = parseDuration(args.timeout)
+  let engine
+  if (args.strategy === 'template') {
+    if (!args.templateFile) {
+      process.stderr.write('Error: --template-file is required when using --strategy template\n')
+      process.exit(1)
+    }
+    engine = new TemplateEngine(args.templateFile)
+  } else if (args.strategy === 'simple') {
+    engine = new SimpleEngine()
+  } else if (args.strategy === 'greedy') {
+    engine = new GreedyEngine()
+  } else {
+    engine = new BacktrackEngine(timeBudgetMs)
+  }
   const placements = engine.run(pool, grid)
 
   // 10. Generate output filename

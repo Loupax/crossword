@@ -1,13 +1,17 @@
 export class BacktrackEngine {
+  constructor(timeBudgetMs = 5 * 60 * 1000) {
+    this.timeBudgetMs = timeBudgetMs
+  }
+
   run(pool, grid) {
     const size = grid.size
-    const TIME_BUDGET_MS = 5 * 60 * 1000
+    const TIME_BUDGET_MS = this.timeBudgetMs
     const dirs = ['horizontal', 'vertical']
 
     // Sort pool by score descending
     const sorted = [...pool].sort((a, b) => b.score - a.score)
 
-    // Precompute all candidate positions for each word
+    // Precompute all candidate positions for each word (shuffled for layout variety)
     const allPositions = sorted.map(({ word }) => {
       const positions = []
       for (let row = 0; row < size; row++) {
@@ -17,15 +21,31 @@ export class BacktrackEngine {
           }
         }
       }
+      // Fisher-Yates shuffle so equal-intersection candidates are tried in random order
+      for (let i = positions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [positions[i], positions[j]] = [positions[j], positions[i]]
+      }
       return positions
     })
 
     const startTime = Date.now()
 
+    // Best-so-far tracker: stores the best placement snapshot found during search
+    const best = { placements: [], count: 0 }
+
     const backtrack = (index) => {
-      // Time budget check
+      // Time budget check — return true to halt all exploration
       if (Date.now() - startTime > TIME_BUDGET_MS) return true
-      if (index === sorted.length) return true
+
+      // Base case: all words considered — snapshot if this is the best result
+      if (index === sorted.length) {
+        if (grid.placed.length > best.count) {
+          best.placements = grid.getPlacements()
+          best.count = grid.placed.length
+        }
+        return false // keep exploring other branches
+      }
 
       const { word, hint } = sorted[index]
 
@@ -54,11 +74,22 @@ export class BacktrackEngine {
         grid.remove(word, candidate.row, candidate.col, candidate.dir)
       }
 
-      // Word is optional — skip and continue
-      return backtrack(index + 1)
+      // Skip this word and continue exploring
+      if (backtrack(index + 1)) return true
+
+      return false
     }
 
     backtrack(0)
+
+    // Restore grid to the best snapshot found during search
+    for (const p of grid.getPlacements()) {
+      grid.remove(p.word, p.row, p.col, p.direction)
+    }
+    for (const p of best.placements) {
+      grid.place(p.word, p.hint, p.row, p.col, p.direction)
+    }
+
     return grid.getPlacements()
   }
 }

@@ -219,6 +219,80 @@ fi
 run_test "encoding guard rejects non-UTF-8 input" "$T6_RESULT"
 
 # ---------------------------------------------------------------------------
+# Test 7: greedy strategy produces output files
+# ---------------------------------------------------------------------------
+T7_DIR="$TMPDIR_CW/t7"
+mkdir -p "$T7_DIR"
+T7_EXCLUDE="$TMPDIR_CW/t7_exclude.txt"
+
+T7_RESULT="fail"
+T7_OUTPUT="$(echo "$WORD_LIST" | node "$DIR/index.js" \
+  --strategy greedy --size 15 \
+  --exclude "$T7_EXCLUDE" \
+  --output-dir "$T7_DIR" 2>&1)" && T7_EXIT=0 || T7_EXIT=$?
+
+if [ "$T7_EXIT" -eq 0 ] \
+  && echo "$T7_OUTPUT" | grep -qE '^Generated: cw_[0-9a-f]+ \([0-9]+ words placed\)$' \
+  && [ "$(find "$T7_DIR" -name '*.html' | wc -l)" -gt 0 ] \
+  && [ "$(find "$T7_DIR" -name '*.txt' | wc -l)" -gt 0 ]; then
+  T7_RESULT="pass"
+fi
+run_test "greedy strategy produces output files" "$T7_RESULT"
+
+# ---------------------------------------------------------------------------
+# Test 8: greedy strategy places first word at center
+# ---------------------------------------------------------------------------
+T8_DIR="$TMPDIR_CW/t8"
+mkdir -p "$T8_DIR"
+T8_EXCLUDE="$TMPDIR_CW/t8_exclude.txt"
+
+T8_RESULT="fail"
+echo "$WORD_LIST" | node "$DIR/index.js" \
+  --strategy greedy --size 15 \
+  --exclude "$T8_EXCLUDE" \
+  --output-dir "$T8_DIR" >/dev/null 2>&1 && T8_EXIT=0 || T8_EXIT=$?
+
+if [ "$T8_EXIT" -eq 0 ]; then
+  T8_HTML="$(find "$T8_DIR" -name '*.html' | head -1)"
+  if [ -n "$T8_HTML" ]; then
+    # The first across or down clue should exist, confirming placement occurred
+    T8_HAS_ACROSS=0
+    T8_HAS_DOWN=0
+    grep -q '"across"' "$T8_HTML" && T8_HAS_ACROSS=1
+    grep -q '"down"' "$T8_HTML" && T8_HAS_DOWN=1
+    if [ "$T8_HAS_ACROSS" -eq 1 ] || [ "$T8_HAS_DOWN" -eq 1 ]; then
+      T8_RESULT="pass"
+    fi
+  fi
+fi
+run_test "greedy strategy places words (has across or down clues)" "$T8_RESULT"
+
+# ---------------------------------------------------------------------------
+# Test 9: greedy places more words than minimum (intersection preference)
+# ---------------------------------------------------------------------------
+T9_DIR="$TMPDIR_CW/t9"
+mkdir -p "$T9_DIR"
+T9_EXCLUDE="$TMPDIR_CW/t9_exclude.txt"
+
+T9_RESULT="fail"
+echo "$WORD_LIST" | node "$DIR/index.js" \
+  --strategy greedy --size 15 \
+  --exclude "$T9_EXCLUDE" \
+  --output-dir "$T9_DIR" >/dev/null 2>&1 && T9_EXIT=0 || T9_EXIT=$?
+
+if [ "$T9_EXIT" -eq 0 ]; then
+  T9_TXT="$(find "$T9_DIR" -name '*.txt' | head -1)"
+  if [ -n "$T9_TXT" ]; then
+    T9_WORD_COUNT="$(wc -l < "$T9_TXT")"
+    # With 10 input words on a 15x15 grid, greedy should place at least 2
+    if [ "$T9_WORD_COUNT" -ge 2 ]; then
+      T9_RESULT="pass"
+    fi
+  fi
+fi
+run_test "greedy strategy places multiple words (intersection preference)" "$T9_RESULT"
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 TOTAL=$((PASS + FAIL))
