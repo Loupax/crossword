@@ -8,7 +8,7 @@ const PLAYER_TEMPLATE_PATH = join(__dirname, '..', 'player.html')
 const SENTINEL = '<!-- __PUZZLE_DATA_INJECTION__ -->'
 
 export class HtmlExporter {
-  async buildPuzzlePayload(placements, size) {
+  buildPuzzlePayload(placements, size) {
     // 1. Assign clue numbers (sort by row then col)
     const sorted = [...placements].sort((a, b) => a.row !== b.row ? a.row - b.row : a.col - b.col)
     const numbered = []
