@@ -47,6 +47,10 @@ function parseArgs(argv) {
         break
       case '--size':
         args.size = parseInt(argv[++i], 10)
+        if (isNaN(args.size)) {
+          process.stderr.write('Error: --size requires a valid numeric value.\n')
+          process.exit(1)
+        }
         break
       case '--exclude':
         args.exclude = argv[++i]
