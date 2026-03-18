@@ -23,7 +23,7 @@ Theme: [Optional: Insert Theme, e.g., Travel, Daily Routine, or "None"]
      * 10 medium words (5 to 7 letters long).
      * 10 long anchor words (8 to 12 letters long).
    - LETTER FREQUENCY: Strongly favor words containing common German intersection letters (E, N, I, S, R, A, T).
-   - MAX LENGTH: Do not generate any single word longer than [Insert Max Grid Dimension, e.g., 13] letters.
+   - MAX LENGTH: Do not generate any single word longer than 15 letters (the CLI default grid size).
 3. Creativity Constraint: Hints MUST be creative, engaging, and require lateral thinking. 
    - DO NOT use direct dictionary definitions.
    - DO NOT just rewrite the word.
@@ -37,7 +37,7 @@ Theme: [Optional: Insert Theme, e.g., Travel, Daily Routine, or "None"]
    - IMPORTANT: Enclose every hint in double quotes ("") to ensure any commas within the hint do not break the CSV structure.
    - Do not include any introductory or concluding text outside of the CSV data.
 6. Grid Compatibility: You are generating a pool of words for a crossword compiling algorithm. The algorithm needs a highly intersectable list of words.
-   - OVER-GENERATE: Provide [Insert Number, e.g., 30] words, even though only a fraction will be used.
+   - OVER-GENERATE: Provide 30 words, even though only a fraction will be used. (The CLI's CandidateSelector will select the optimal 75-word pool from a larger input if available.)
    - LENGTH MIX: Ensure approximately 40% of the words are short "glue" words (3 to 5 letters long). 
    - LETTER FREQUENCY: Favor words that contain high-frequency German intersection letters (E, N, I, S, R, A, T). Limit words with rare letters (Q, X, Y, J) unless strictly necessary for the theme.
 </instructions>
@@ -54,5 +54,12 @@ Example 2 (Target: A1, Hint: B2): Target Word = "BAHNHOF"
 BAD: BAHNHOF,"Ein oft hektischer Verkehrsknotenpunkt." (A bit dry and literal).
 GOOD: BAHNHOF,"Knotenpunkt für eilige Pendler." (Punchy, singular focus, uses B2 vocabulary).
 </examples>
+
+## Pipeline Usage
+The CSV output of this skill can be piped directly into the crossword CLI:
+```bash
+# Generate words (this skill output) → pipe to CLI → standalone HTML puzzle
+/generate-words | node cli/index.js --strategy simple --size 15 --output-dir ./output
+```
 
 Generate the requested pairs now in CSV format:

@@ -1,0 +1,8 @@
+{
+  "name": "crossword-cli",
+  "version": "1.0.0",
+  "description": "German crossword puzzle generator CLI",
+  "type": "module",
+  "bin": { "crossword-cli": "./index.js" },
+  "scripts": { "start": "node index.js" }
+}

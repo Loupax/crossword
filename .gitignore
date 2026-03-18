@@ -1,2 +1,5 @@
 .claude/worktrees/
 .env
+cw_*.html
+cw_*.txt
+used_words.txt
