@@ -1,0 +1,48 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+const ROOT = path.resolve(__dirname, '..');
+const BACKLOG_DIR = path.join(ROOT, 'puzzles', 'backlog');
+const COMPLETED_DIR = path.join(ROOT, 'puzzles', 'completed');
+const DEPLOY_TARGET = path.join(ROOT, 'docs', 'index.html');
+
+// Ensure directories exist
+fs.mkdirSync(BACKLOG_DIR, { recursive: true });
+fs.mkdirSync(COMPLETED_DIR, { recursive: true });
+fs.mkdirSync(path.dirname(DEPLOY_TARGET), { recursive: true });
+
+// Select next puzzle (FIFO: alphabetical sort)
+const files = fs.readdirSync(BACKLOG_DIR)
+  .filter(f => f.endsWith('.html'))
+  .sort();
+
+if (files.length === 0) {
+  console.error('BACKLOG EMPTY: Please generate new puzzles');
+  process.exit(1);
+}
+
+const chosen = files[0];
+const srcPath = path.join(BACKLOG_DIR, chosen);
+const destPath = path.join(COMPLETED_DIR, chosen);
+
+// Deploy
+fs.copyFileSync(srcPath, DEPLOY_TARGET);
+console.log(`Deployed: ${chosen} → docs/index.html`);
+
+// Rotate
+fs.renameSync(srcPath, destPath);
+console.log(`Rotated: puzzles/backlog/${chosen} → puzzles/completed/${chosen}`);
+
+// Git
+try {
+  execSync('git add docs/index.html puzzles/backlog/ puzzles/completed/', { cwd: ROOT, stdio: 'inherit' });
+  execSync('git commit -m "chore: daily puzzle rotation"', { cwd: ROOT, stdio: 'inherit' });
+  execSync('git push', { cwd: ROOT, stdio: 'inherit' });
+  console.log('Git: committed and pushed');
+} catch (err) {
+  console.error('Git operation failed:', err.message);
+  process.exit(1);
+}

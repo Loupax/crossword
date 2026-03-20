@@ -533,7 +533,61 @@ async function sha256hex(message) {
 
 function init() {
   if (typeof window.__PUZZLE_DATA__ !== 'undefined') {
+    const STORAGE_KEY = 'crossword-save-' + window.__PUZZLE_DATA__.salt;
+
+    // Garbage collect stale puzzle saves
+    const keysToDelete = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('crossword-save-') && k !== STORAGE_KEY) {
+        keysToDelete.push(k);
+      }
+    }
+    keysToDelete.forEach(k => localStorage.removeItem(k));
+
+    // State helpers
+    // Note: this player stores letters in the playerGrid 2D array (not DOM inputs).
+    // saveState serializes playerGrid directly; loadState restores it and re-renders.
+    function saveState() {
+      if (!playerGrid) return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(playerGrid));
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      try {
+        const saved = JSON.parse(raw);
+        if (!Array.isArray(saved)) return;
+        for (let r = 0; r < saved.length; r++) {
+          if (!Array.isArray(saved[r])) continue;
+          for (let c = 0; c < saved[r].length; c++) {
+            if (playerGrid[r] && saved[r][c]) {
+              playerGrid[r][c] = saved[r][c];
+            }
+          }
+        }
+        renderGrid();
+      } catch (e) { /* ignore corrupt state */ }
+    }
+
     loadPuzzle(window.__PUZZLE_DATA__);
+    loadState();
+
+    // Auto-save on any keydown that modifies the grid
+    document.addEventListener('keydown', function(e) {
+      if (!puzzle || !activePos) return;
+      const key = e.key;
+      if (
+        (key.length === 1 && /^[a-zA-ZäöüÄÖÜß]$/.test(key)) ||
+        key === 'Backspace' ||
+        key === 'Delete'
+      ) {
+        // Save after the existing keydown handler has updated playerGrid
+        setTimeout(saveState, 0);
+      }
+    });
+
     return;
   }
 
