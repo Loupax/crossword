@@ -36,13 +36,22 @@ console.log(`Deployed: ${chosen} → docs/index.html`);
 fs.renameSync(srcPath, destPath);
 console.log(`Rotated: puzzles/backlog/${chosen} → puzzles/completed/${chosen}`);
 
-// Git
+// Commit rotation locally (backlog → completed)
 try {
-  execSync('git add docs/index.html', { cwd: ROOT, stdio: 'inherit' });
+  execSync('git add puzzles/backlog puzzles/completed', { cwd: ROOT, stdio: 'inherit' });
   execSync('git commit -m "chore: daily puzzle rotation"', { cwd: ROOT, stdio: 'inherit' });
-  execSync('git push', { cwd: ROOT, stdio: 'inherit' });
-  console.log('Git: committed and pushed');
+  console.log('Git: committed rotation');
 } catch (err) {
-  console.error('Git operation failed:', err.message);
+  console.error('Git commit failed:', err.message);
+  process.exit(1);
+}
+
+// Deploy docs/ to Cloudflare Pages
+try {
+  execSync('wrangler pages deploy docs/ --project-name crossword', { cwd: ROOT, stdio: 'inherit' });
+  console.log('Cloudflare Pages: deployed');
+} catch (err) {
+  console.error('Cloudflare Pages deploy failed:', err.message);
+  console.error('Ensure wrangler is installed (npm i -g wrangler) and you are authenticated (wrangler login)');
   process.exit(1);
 }
