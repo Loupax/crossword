@@ -3,4 +3,5 @@
 cw_*.html
 cw_*.txt
 used_words.txt
+word_history.csv
 crossword_*.csv
