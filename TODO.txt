@@ -1,5 +1,5 @@
 # TODO — German Crossword Creator
-Last updated: 2026-03-21 (session 7)
+Last updated: 2026-03-21 (session 8)
 
 ## In Progress
 (nothing currently in progress)
@@ -7,6 +7,7 @@ Last updated: 2026-03-21 (session 7)
 ## Backlog
 
 ### Feature: Mobile Player Enhancements
+- [ ] Remove "1 horizontal" / "2 vertical" prefix from active clue box — show hint text only
 - [ ] Implement backend storage for cross-device progress synchronization.
 - [ ] Develop custom on-screen 'Crossword Keyboard' to replace OS proxy.
 - [ ] Optimize SHA-256 validation for low-power mobile devices.
@@ -77,3 +78,5 @@ Last updated: 2026-03-21 (session 7)
 
 ### Chore: Go Solver — Strangler Fig Migration
 - [ ] Complete the Strangler Fig migration: move HTML exporting, exclude-list management, and CLI arg parsing from Node.js into the Go solver to fully deprecate the Node.js toolchain
+- [ ] Add parallel restarts to Go solver: N goroutines with shuffled word orders racing same timeout, return best result
+- [ ] Add forward checking to Go solver: after placing a word, verify all remaining words still have ≥1 valid position (prune dead branches earlier)
