@@ -6,9 +6,9 @@
 <title>Kreuzworträtsel-Spieler</title>
 <style>
   :root {
-    --primary: #2c5f8a;
-    --primary-light: #3a7cb8;
-    --primary-dark: #1e4060;
+    --primary: #007bff;
+    --primary-light: #3a8fd8;
+    --primary-dark: #0056b3;
     --accent: #e8a838;
     --accent-light: #f0c060;
     --success: #4caf50;
@@ -19,12 +19,12 @@
     --text: #2c3e50;
     --text-light: #7f8c8d;
     --border: #dce1e6;
-    --cell-size: 36px;
-    --highlight: #fff3cd;
+    --cell-size: clamp(28px, 5vw, 42px);
     --valid-highlight: rgba(76, 175, 80, 0.25);
     --invalid-highlight: rgba(231, 76, 60, 0.25);
-    --selected-cell: #b3d4fc;
-    --active-cell: #6baed6;
+    --selected-cell: #e7f1ff;
+    --active-cell: #007bff;
+    --text-on-primary: #ffffff;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -114,9 +114,6 @@
 
   /* Load screen */
   .load-screen {
-    max-width: 600px;
-    margin: 60px auto;
-    padding: 32px;
     background: var(--surface);
     border-radius: 12px;
     border: 1px solid var(--border);
@@ -208,9 +205,6 @@
   .player-layout {
     display: none;
     gap: 24px;
-    padding: 20px;
-    max-width: 1400px;
-    margin: 0 auto;
     align-items: flex-start;
   }
 
@@ -224,7 +218,6 @@
 
   .clues-panel {
     flex: 1;
-    min-width: 280px;
     display: flex;
     gap: 20px;
   }
@@ -236,8 +229,6 @@
     border: 1px solid var(--border);
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     padding: 16px;
-    max-height: 80vh;
-    overflow-y: auto;
   }
 
   .clue-section h3 {
@@ -267,7 +258,7 @@
   }
 
   .clue-list li.active {
-    background: var(--highlight);
+    background: var(--selected-cell);
     font-weight: 600;
   }
 
@@ -404,37 +395,63 @@
     margin-bottom: 12px;
   }
 
-  /* Responsive */
-  @media (max-width: 900px) {
-    .player-layout.active {
-      flex-direction: column;
-    }
+  /* Mobile-first base */
+  .player-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 8px;
+  }
+  .clues-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+  .clue-section {
+    max-height: none;
+    overflow-y: visible;
+  }
+  .grid-container {
+    overflow-x: auto;
+  }
+  header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .load-screen {
+    margin: 20px 12px;
+    padding: 20px;
+  }
 
+  /* Tablet and up */
+  @media (min-width: 768px) {
+    .player-layout {
+      flex-direction: row;
+      align-items: flex-start;
+      padding: 20px;
+    }
     .clues-panel {
-      flex-direction: column;
-      min-width: 0;
-      width: 100%;
+      flex: 1 1 0;
+      min-width: 280px;
     }
-
     .clue-section {
-      max-height: none;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .load-screen {
+      max-width: 600px;
+      margin: 60px auto;
+      padding: 32px;
     }
   }
 
-  @media (max-width: 500px) {
+  /* Small phones */
+  @media (max-width: 400px) {
     header {
       flex-direction: column;
-      gap: 8px;
       text-align: center;
-    }
-
-    .load-screen {
-      margin: 20px 12px;
-      padding: 20px;
-    }
-
-    .player-layout.active {
-      padding: 12px;
     }
   }
 </style>
@@ -452,6 +469,10 @@
     <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="loadNewPuzzle()">Neues Rätsel</button>
   </div>
 </header>
+
+<div id="activeClueBar" style="display:none; position:sticky; top:0; z-index:100; background:var(--primary); color:var(--text-on-primary); padding:10px 16px; font-size:0.9rem; line-height:1.4;">
+  <span id="activeClueLabel" style="font-weight:700; margin-right:8px;"></span><span id="activeClueText"></span>
+</div>
 
 <!-- Load screen -->
 <div class="load-screen" id="loadScreen">
@@ -519,6 +540,18 @@ let cellMap = null;       // Map<"r,c", { number, acrossClue, downClue }>
 let selectedClue = null;  // { direction: 'across'|'down', index: number (into puzzle.clues array) }
 let activePos = null;     // { row, col } — current cursor position
 let checkActive = false;  // Whether check-solution highlights are shown
+
+function updateActiveClueBar(direction, clue) {
+  const bar = document.getElementById('activeClueBar');
+  const label = document.getElementById('activeClueLabel');
+  const text = document.getElementById('activeClueText');
+  if (!bar) return;
+  if (!clue) { bar.style.display = 'none'; return; }
+  const dirLabel = direction === 'across' ? 'Waagerecht' : 'Senkrecht';
+  label.textContent = clue.number + ' ' + dirLabel + ':';
+  text.textContent = clue.hint;
+  bar.style.display = 'block';
+}
 
 // ============================================================
 // PUZZLE LOADING
@@ -701,6 +734,7 @@ function loadPuzzle(data) {
 }
 
 function loadNewPuzzle() {
+  updateActiveClueBar(null, null);
   puzzle = null;
   playerGrid = null;
   cellMap = null;
@@ -911,7 +945,10 @@ function onCellClick(row, col) {
         selectedClue = { direction: 'across', index: info.acrossClue };
       }
       activePos = { row: row, col: col };
+      updateActiveClueBar(selectedClue.direction, getSelectedClueData());
       renderGrid();
+      const proxy = document.getElementById('keyProxy');
+      if (proxy) proxy.focus();
       renderClues();
       scrollToActiveClue();
       return;
@@ -930,7 +967,10 @@ function onCellClick(row, col) {
   }
 
   activePos = { row: row, col: col };
+  updateActiveClueBar(selectedClue ? selectedClue.direction : null, getSelectedClueData());
   renderGrid();
+  const proxy = document.getElementById('keyProxy');
+  if (proxy) proxy.focus();
   renderClues();
   scrollToActiveClue();
 }
@@ -938,6 +978,7 @@ function onCellClick(row, col) {
 function onClueClick(direction, index) {
   checkActive = false;
   selectedClue = { direction: direction, index: index };
+  updateActiveClueBar(direction, getSelectedClueData());
 
   // Move cursor to first empty cell in the word, or first cell
   const clueData = getSelectedClueData();
@@ -978,6 +1019,7 @@ function scrollToActiveClue() {
 
 document.addEventListener('keydown', function(e) {
   if (!puzzle || !activePos) return;
+  if (e.target === document.getElementById('keyProxy')) return;
 
   // Don't capture if focus is on an input/textarea
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -1065,6 +1107,57 @@ document.addEventListener('keydown', function(e) {
     return;
   }
 });
+
+// OS Keyboard Proxy — enables native mobile keyboard on cell tap
+(function() {
+  const proxy = document.getElementById('keyProxy');
+  if (!proxy) return;
+
+  proxy.addEventListener('input', function() {
+    if (!puzzle || !activePos) { proxy.value = ''; return; }
+    const val = proxy.value;
+    proxy.value = '';
+    if (!val) return;
+    const char = val[val.length - 1].toUpperCase();
+    if (/^[A-ZÄÖÜ]$/.test(char) || char === 'ß'.toUpperCase()) {
+      const r = activePos.row, c = activePos.col;
+      playerGrid[r][c] = char;
+      advanceCursor(1);
+      renderGrid();
+      if (typeof saveState === 'function') saveState();
+    }
+  });
+
+  proxy.addEventListener('keydown', function(e) {
+    if (!puzzle || !activePos) return;
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      const r = activePos.row, c = activePos.col;
+      if (playerGrid[r][c] !== '') {
+        playerGrid[r][c] = '';
+      } else {
+        advanceCursor(-1);
+      }
+      renderGrid();
+      if (typeof saveState === 'function') saveState();
+    } else if (e.key === 'Delete') {
+      e.preventDefault();
+      const r = activePos.row, c = activePos.col;
+      playerGrid[r][c] = '';
+      renderGrid();
+      if (typeof saveState === 'function') saveState();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      advanceClue(e.shiftKey ? -1 : 1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      advanceClue(1);
+    } else if (e.key === 'ArrowRight') { e.preventDefault(); moveArrow(0, 1); }
+      else if (e.key === 'ArrowLeft')  { e.preventDefault(); moveArrow(0, -1); }
+      else if (e.key === 'ArrowDown')  { e.preventDefault(); moveArrow(1, 0); }
+      else if (e.key === 'ArrowUp')    { e.preventDefault(); moveArrow(-1, 0); }
+  });
+})();
 
 function advanceCursor(dir) {
   if (!selectedClue || !activePos) return;
@@ -1306,5 +1399,6 @@ init();
 
 })();
 </script>
+<input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;top:-9999px;" />
 </body>
 </html>

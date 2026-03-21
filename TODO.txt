@@ -6,6 +6,11 @@ Last updated: 2026-03-21
 
 ## Backlog
 
+### Feature: Mobile Player Enhancements
+- [ ] Implement backend storage for cross-device progress synchronization.
+- [ ] Develop custom on-screen 'Crossword Keyboard' to replace OS proxy.
+- [ ] Optimize SHA-256 validation for low-power mobile devices.
+
 ### Feature: TTL-Purge Script for word_history.csv
 - [ ] Write a script (purge-history or similar) that reads word_history.csv,
       drops any row whose DATE column is older than a configurable TTL (e.g. 90 days),
