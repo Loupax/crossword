@@ -3,7 +3,6 @@
 import os
 import time
 import argparse
-import random
 from google import genai
 from google.genai import types
 
@@ -15,7 +14,7 @@ system_instruction = """
 Name: Schwedenrätsel Clue Maker
 
 Purpose and Goals:
-Create highly accurate, ultra-short German crossword clues suitable for a traditional grid (Schwedenrätsel) based on CEFR levels and themes. The hints must be cleverly cryptic, but the vocabulary used in the hints MUST strictly adhere to the requested CEFR Hint Level.
+Create highly accurate, ultra-short German crossword clues suitable for a traditional grid (Schwedenrätsel) based on themes. The hints must be cleverly cryptic, but the vocabulary used in the hints MUST strictly adhere to the requested CEFR Hint Level.
 
 Behaviors and Rules:
 
@@ -61,58 +60,47 @@ Behaviors and Rules:
 
 # 3. Accept the themes array as a parameter
 def run_bulk_generation(hint_difficulty, batch_size, themes):
-    cefr_levels = ["A1", "A2", "B1"]
-    random.shuffle(themes) 
-    generated_words = set()
-
     print(f"Starting generation | Hint Level: {hint_difficulty} | Batch Size: {batch_size}")
     print(f"Themes to process: {themes}\n")
 
-    for level in cefr_levels:
-        current_batch = 1
-        total_batches_per_level = len(themes)
+    current_batch = 1
+    total_batches = len(themes)
 
-        for theme in themes:
-            safe_theme = theme.replace(" ", "_")
-            output_filename = f"crossword_{safe_theme}_{level}_{hint_difficulty}.csv"
-            
-            with open(output_filename, "a", encoding="utf-8") as file:
-                prompt = f"{batch_size} words, Word Level: {level}, Hint Level: {hint_difficulty}, Theme: {theme}."
-                print(f"[{current_batch}/{total_batches_per_level}] Generating {theme} into {output_filename}...")
-                
-                try:
-                    response = client.models.generate_content(
-                        model="gemini-3.0-flash", 
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            system_instruction=system_instruction,
-                            temperature=0.4
-                        )
+    for theme in themes:
+        safe_theme = theme.replace(" ", "_")
+        os.makedirs("words", exist_ok=True)
+        output_filename = os.path.join("words", f"crossword_{safe_theme}_{hint_difficulty}.csv")
+
+        with open(output_filename, "a", encoding="utf-8") as file:
+            prompt = f"{batch_size} words, Hint Level: {hint_difficulty}, Theme: {theme}."
+            print(f"[{current_batch}/{total_batches}] Generating {theme} into {output_filename}...")
+
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.4
                     )
-                    
-                    csv_data = response.text.strip()
-                    
-                    lines = csv_data.split('\n')
-                    valid_lines = []
-                    for line in lines:
-                        if ',' in line:
-                            word = line.split(',')[0].strip().upper()
-                            if word not in generated_words:
-                                generated_words.add(word)
-                                valid_lines.append(line)
-                    
-                    if valid_lines:
-                        file.write('\n'.join(valid_lines) + "\n")
-                        file.flush()
-                        print(f"  -> Success! Saved {len(valid_lines)} unique words.")
-                    else:
-                        print(f"  -> All generated words were duplicates. Skipping write.")
-                        
-                except Exception as e:
-                    print(f"  -> Error generating batch: {e}")
-                
-                time.sleep(4) 
-                current_batch += 1
+                )
+
+                csv_data = response.text.strip()
+
+                lines = [line for line in csv_data.split('\n') if ',' in line]
+
+                if lines:
+                    file.write('\n'.join(lines) + "\n")
+                    file.flush()
+                    print(f"  -> Success! Saved {len(lines)} words.")
+                else:
+                    print(f"  -> No valid lines in response. Skipping write.")
+
+            except Exception as e:
+                print(f"  -> Error generating batch: {e}")
+
+            time.sleep(4)
+            current_batch += 1
 
     print("\nBulk generation complete!")
 
