@@ -6,9 +6,9 @@
 <title>Kreuzworträtsel-Spieler</title>
 <style>
   :root {
-    --primary: #2c5f8a;
-    --primary-light: #3a7cb8;
-    --primary-dark: #1e4060;
+    --primary: #007bff;
+    --primary-light: #3a8fd8;
+    --primary-dark: #0056b3;
     --accent: #e8a838;
     --accent-light: #f0c060;
     --success: #4caf50;
@@ -19,12 +19,12 @@
     --text: #2c3e50;
     --text-light: #7f8c8d;
     --border: #dce1e6;
-    --cell-size: 36px;
-    --highlight: #fff3cd;
+    --cell-size: clamp(28px, 5vw, 42px);
     --valid-highlight: rgba(76, 175, 80, 0.25);
     --invalid-highlight: rgba(231, 76, 60, 0.25);
-    --selected-cell: #b3d4fc;
-    --active-cell: #6baed6;
+    --selected-cell: #e7f1ff;
+    --active-cell: #007bff;
+    --text-on-primary: #ffffff;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -36,31 +36,6 @@
     line-height: 1.5;
   }
 
-  header {
-    background: var(--primary);
-    color: white;
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  }
-
-  header h1 {
-    font-size: 1.4rem;
-    font-weight: 600;
-  }
-
-  header .subtitle {
-    font-size: 0.85rem;
-    opacity: 0.8;
-    font-weight: 400;
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 8px;
-  }
 
   /* Buttons */
   .btn {
@@ -112,105 +87,11 @@
     cursor: not-allowed;
   }
 
-  /* Load screen */
-  .load-screen {
-    max-width: 600px;
-    margin: 60px auto;
-    padding: 32px;
-    background: var(--surface);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  }
-
-  .load-screen h2 {
-    font-size: 1.3rem;
-    margin-bottom: 24px;
-    color: var(--primary);
-  }
-
-  .load-section {
-    margin-bottom: 24px;
-  }
-
-  .load-section label {
-    display: block;
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--text);
-  }
-
-  .load-section input[type="file"] {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    border: 2px dashed var(--border);
-    border-radius: 8px;
-    background: var(--bg);
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-
-  .load-section input[type="file"]:hover {
-    border-color: var(--primary-light);
-  }
-
-  .load-section textarea {
-    width: 100%;
-    height: 150px;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 0.85rem;
-    resize: vertical;
-  }
-
-  .load-section textarea:focus {
-    outline: none;
-    border-color: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(58, 124, 184, 0.15);
-  }
-
-  .load-divider {
-    text-align: center;
-    color: var(--text-light);
-    font-size: 0.85rem;
-    margin: 16px 0;
-    position: relative;
-  }
-
-  .load-divider::before,
-  .load-divider::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 40%;
-    height: 1px;
-    background: var(--border);
-  }
-  .load-divider::before { left: 0; }
-  .load-divider::after { right: 0; }
-
-  .load-error {
-    color: var(--danger);
-    font-size: 0.85rem;
-    margin-top: 8px;
-    display: none;
-  }
-
-  .load-error.visible {
-    display: block;
-  }
 
   /* Player layout */
   .player-layout {
     display: none;
     gap: 24px;
-    padding: 20px;
-    max-width: 1400px;
-    margin: 0 auto;
     align-items: flex-start;
   }
 
@@ -224,7 +105,6 @@
 
   .clues-panel {
     flex: 1;
-    min-width: 280px;
     display: flex;
     gap: 20px;
   }
@@ -236,8 +116,6 @@
     border: 1px solid var(--border);
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     padding: 16px;
-    max-height: 80vh;
-    overflow-y: auto;
   }
 
   .clue-section h3 {
@@ -267,7 +145,7 @@
   }
 
   .clue-list li.active {
-    background: var(--highlight);
+    background: var(--selected-cell);
     font-weight: 600;
   }
 
@@ -281,6 +159,7 @@
   .grid-container {
     overflow: auto;
     padding: 16px;
+    text-align: center;
     background: var(--surface);
     border-radius: 8px;
     border: 1px solid var(--border);
@@ -357,13 +236,6 @@
     color: var(--primary-dark);
   }
 
-  /* Toolbar below grid */
-  .player-toolbar {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-  }
 
   /* Status / message bar */
   .status-bar {
@@ -404,76 +276,89 @@
     margin-bottom: 12px;
   }
 
-  /* Responsive */
-  @media (max-width: 900px) {
-    .player-layout.active {
-      flex-direction: column;
-    }
-
-    .clues-panel {
-      flex-direction: column;
-      min-width: 0;
-      width: 100%;
-    }
-
-    .clue-section {
-      max-height: none;
-    }
+  /* Mobile-first base */
+  .player-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 8px;
+  }
+  .clues-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+  .clue-section {
+    max-height: none;
+    overflow-y: visible;
+  }
+  .grid-container {
+    overflow-x: auto;
   }
 
-  @media (max-width: 500px) {
-    header {
-      flex-direction: column;
-      gap: 8px;
-      text-align: center;
-    }
-
-    .load-screen {
-      margin: 20px 12px;
+  /* Tablet and up */
+  @media (min-width: 768px) {
+    .player-layout {
+      flex-direction: row;
+      align-items: flex-start;
       padding: 20px;
     }
-
-    .player-layout.active {
-      padding: 12px;
+    .clues-panel {
+      flex: 1 1 0;
+      min-width: 280px;
+    }
+    .clue-section {
+      max-height: 80vh;
+      overflow-y: auto;
     }
   }
+
+#activeClueBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--selected-cell);
+  border: 2px solid var(--primary);
+  border-radius: 6px;
+  padding: 0 12px;
+  margin: 8px 0;
+  height: 60px;
+  flex-shrink: 0;
+}
+#activeClueBoxText {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+#prevClueBtn, #nextClueBtn {
+  flex: 0 0 auto;
+  background: var(--primary);
+  color: var(--text-on-primary);
+  border: none;
+  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#prevClueBtn:hover, #nextClueBtn:hover {
+  background: var(--primary-dark);
+}
 </style>
 </head>
 <body>
 
-<header>
-  <div>
-    <h1>Kreuzworträtsel-Spieler</h1>
-    <span class="subtitle">Deutsches Kreuzworträtsel lösen</span>
-  </div>
-  <div class="header-actions" id="headerActions" style="display:none;">
-    <button class="btn btn-accent" onclick="checkSolution()">Lösung prüfen</button>
-    <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="resetPuzzle()">Zurücksetzen</button>
-    <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="loadNewPuzzle()">Neues Rätsel</button>
-  </div>
-</header>
 
-<!-- Load screen -->
-<div class="load-screen" id="loadScreen">
-  <h2>Kreuzworträtsel laden</h2>
-
-  <div class="load-section">
-    <label for="fileInput">JSON-Datei auswählen</label>
-    <input type="file" id="fileInput" accept=".json,application/json" onchange="handleFileUpload(event)">
-  </div>
-
-  <div class="load-divider">oder</div>
-
-  <div class="load-section">
-    <label for="jsonPaste">JSON hier einfügen:</label>
-    <textarea id="jsonPaste" placeholder='{"metadata": {...}, "grid": [...], "clues": {...}}'></textarea>
-    <div style="margin-top: 8px;">
-      <button class="btn btn-primary" onclick="handlePaste()">Laden</button>
-    </div>
-  </div>
-
-  <div class="load-error" id="loadError"></div>
-</div>
 
 <!-- Player view -->
 <div class="player-layout" id="playerLayout">
@@ -485,9 +370,10 @@
         <div class="crossword-grid" id="crosswordGrid"></div>
       </div>
     </div>
-    <div class="player-toolbar">
-      <button class="btn btn-accent" onclick="checkSolution()">Lösung prüfen</button>
-      <button class="btn btn-outline" onclick="resetPuzzle()">Zurücksetzen</button>
+    <div id="activeClueBox">
+      <button id="prevClueBtn" aria-label="Vorheriger Hinweis">&larr;</button>
+      <div id="activeClueBoxText">Wähle ein Wort aus…</div>
+      <button id="nextClueBtn" aria-label="Nächster Hinweis">&rarr;</button>
     </div>
     <div class="status-bar" id="statusBar">Klicke auf eine Zelle oder einen Hinweis, um zu beginnen.</div>
   </div>
@@ -505,7 +391,7 @@
 </div>
 
 <script>
-window.__PUZZLE_DATA__ = {"metadata":{"title":"German Crossword","gridSize":{"rows":9,"cols":9},"totalWords":11,"createdAt":"2026-03-18T21:38:47.754Z"},"salt":"e073392f5475f250a45da9a0059f1c8d","clues":{"across":[{"number":1,"hint":"'sauber gemacht'","row":0,"col":0,"length":9,"hash":"e8c21bc64d8530dd76dd8aaa7757d536c3a6b3f26304c447ebdf11f203dc827c"},{"number":3,"hint":"'Abwesenheit bedauern'","row":2,"col":0,"length":9,"hash":"1dadaf8110b82eed37cde75032cd5056e03091f7ef57bd17d743adbfc8507ab4"},{"number":6,"hint":"'eine Strafe erteilen'","row":4,"col":0,"length":9,"hash":"0ebc96c3c333d0c1c953e03ba6e2280475de705bfd1be65c4702593af6ebb5b6"},{"number":7,"hint":"'Geld nach dem Tod'","row":6,"col":0,"length":4,"hash":"f8c5bb28ff6068bf63e3967a7f4e58a8a968e7dcc7fddbfe354ee35bb5c67aaf"},{"number":8,"hint":"'berufliche Gruppe'","row":6,"col":5,"length":4,"hash":"dc4cc680ae9f07a2fac52ffd5dc114619e89dd6545f937989b19fc7a2c3125f1"},{"number":9,"hint":"'internationale Kontonummer'","row":8,"col":0,"length":4,"hash":"b60a10ba06003a60288b052ed4f8a2fa353a51c5bbf49082b733d6d8a406f11b"},{"number":10,"hint":"'großer Wasservogel'","row":8,"col":5,"length":4,"hash":"53506d9b8f1fe9ee7712385aef80edfe8e46bba38a1cc61474ce20d1ce9945fa"}],"down":[{"number":2,"hint":"'nach Fakten suchen'","row":0,"col":3,"length":9,"hash":"727191ce13cbdac708958e45331d1cf37443e49f82c8fc50b16e0a3d67ec264f"},{"number":4,"hint":"'Bild vom Dokument'","row":2,"col":5,"length":4,"hash":"910f9c78ce5e4a5a7fd3ac36ded5f9e940f4d7ef8ed987084b423c47a6ac976e"},{"number":5,"hint":"'vermählter Partner'","row":2,"col":7,"length":7,"hash":"6dc21bf5b64fd8405abee9b2e2fe1c0518848a20075ec692914af14b270a3a76"},{"number":6,"hint":"'großer Honigfresser'","row":4,"col":0,"length":4,"hash":"3a9b31de474361670477636e102c49eb5253d5d2c796d2dacf4e2ce5d622c0e1"}]}};
+window.__PUZZLE_DATA__ = {"metadata":{"title":"German Crossword","gridSize":{"rows":9,"cols":9},"totalWords":11,"createdAt":"2026-03-21T18:50:51.161Z"},"salt":"68cce6fc56bdf82558a224e372f57aa4","clues":{"across":[{"number":3,"hint":"Fasching treiben","row":1,"col":0,"length":6,"hash":"cd1d02d65ff077c96d7e5e1d934269fcbf473dc63a7dddbd1f2c690399999ba8"},{"number":6,"hint":"Geld zurückgeben","row":4,"col":0,"length":9,"hash":"6a0f443738235d9e1f59c67c4e074f46e1c236a657a319acf18c63473cd8552c"},{"number":10,"hint":"Körnige Sättigung","row":6,"col":5,"length":4,"hash":"32ab15c5a1dce93bd2ea34d849fc327e7918fbe368780535e21a7bc1d6fd7571"},{"number":11,"hint":"Schnatternd schwimmen","row":8,"col":1,"length":4,"hash":"8b30c87489c53010597df1c5879f6c0d918540e7b8c03b8870ad6cf071615164"}],"down":[{"number":1,"hint":"Freiwillig reichen","row":0,"col":0,"length":8,"hash":"a6440b28e5a5c236a9a2446b86e29dc839492c6aae5bc70ade27180026b7ed4c"},{"number":2,"hint":"Beklemmend spürbar","row":0,"col":5,"length":5,"hash":"1bc9581cc69cc915df40075bb5d069d5d5c9ca4fffb3eec0e4e775ffd0178cf7"},{"number":4,"hint":"Übrig geblieben","row":1,"col":3,"length":4,"hash":"c2968c4f8345d7bc7f93aa80b09bdc42ec5c1166261a92945d742faf1d2213c9"},{"number":5,"hint":"Riechorgan","row":1,"col":7,"length":4,"hash":"1602539ab3a617be5a6fdd60b70980925fe868e22a12c2197167132dabdf79e0"},{"number":7,"hint":"Harter Brocken","row":4,"col":2,"length":5,"hash":"8e429fe9d3006a47d4d283ad28d944c8459f620033ff3faee1b5eebfa7d8a403"},{"number":8,"hint":"Lebt im Zoo","row":4,"col":6,"length":4,"hash":"f8aab3ab7212b616de3d51208311aacb25f8daf034471d1f501d88dc938d63a3"},{"number":9,"hint":"Vogelbehausung","row":4,"col":8,"length":4,"hash":"fbfe1a656bbd7ca3d9d13c4337214ae321a8361cb1643da489f7003b120dc517"}]}};
 </script>
 <!-- __PUZZLE_DATA_INJECTION__ -->
 <script>
@@ -523,6 +409,18 @@ let selectedClue = null;  // { direction: 'across'|'down', index: number (into p
 let activePos = null;     // { row, col } — current cursor position
 let checkActive = false;  // Whether check-solution highlights are shown
 
+function updateActiveClueDisplays(direction, clue) {
+  const boxText = document.getElementById('activeClueBoxText');
+  if (boxText) {
+    if (!clue) {
+      boxText.textContent = 'Wähle ein Wort aus\u2026';
+    } else {
+      const dirLabel = direction === 'across' ? 'Waagerecht' : 'Senkrecht';
+      boxText.textContent = clue.number + ' ' + dirLabel + ': ' + clue.hint;
+    }
+  }
+}
+
 // ============================================================
 // PUZZLE LOADING
 // ============================================================
@@ -536,7 +434,56 @@ async function sha256hex(message) {
 
 function init() {
   if (typeof window.__PUZZLE_DATA__ !== 'undefined') {
+    const STORAGE_KEY = 'crossword-save-' + window.__PUZZLE_DATA__.salt;
+
+    // Garbage collect stale puzzle saves
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('crossword-save-') && k !== STORAGE_KEY)
+      .forEach(k => localStorage.removeItem(k));
+
+    // State helpers
+    // Note: this player stores letters in the playerGrid 2D array (not DOM inputs).
+    // saveState serializes playerGrid directly; loadState restores it and re-renders.
+    function saveState() {
+      if (!playerGrid) return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(playerGrid));
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      try {
+        const saved = JSON.parse(raw);
+        if (!Array.isArray(saved)) return;
+        for (let r = 0; r < playerGrid.length; r++) {
+          if (!Array.isArray(saved[r])) continue;
+          for (let c = 0; c < playerGrid[r].length; c++) {
+            if (typeof saved[r][c] === 'string') {
+              playerGrid[r][c] = saved[r][c];
+            }
+          }
+        }
+        renderGrid();
+      } catch (e) { console.error('Failed to load corrupt state from localStorage:', e); }
+    }
+
     loadPuzzle(window.__PUZZLE_DATA__);
+    loadState();
+
+    // Auto-save on any keydown that modifies the grid
+    document.addEventListener('keydown', function(e) {
+      if (!puzzle || !activePos) return;
+      const key = e.key;
+      if (
+        (key.length === 1 && /^[a-zA-ZäöüÄÖÜß]$/.test(key)) ||
+        key === 'Backspace' ||
+        key === 'Delete'
+      ) {
+        // Save after the existing keydown handler has updated playerGrid
+        setTimeout(saveState, 0);
+      }
+    });
+
     return;
   }
 
@@ -557,60 +504,24 @@ function init() {
       loadPuzzle(data);
       return;
     } catch (e) {
-      showLoadError('Fehler beim Laden aus URL-Parameter: ' + e.message);
+      setStatus('Fehler beim Laden aus URL-Parameter: ' + e.message, 'error');
     }
-  }
-}
-
-function handleFileUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      loadPuzzle(data);
-    } catch (err) {
-      showLoadError('Ungültige JSON-Datei: ' + err.message);
-    }
-  };
-  reader.readAsText(file);
-}
-
-function handlePaste() {
-  const text = document.getElementById('jsonPaste').value.trim();
-  if (!text) {
-    showLoadError('Bitte JSON einfügen.');
     return;
   }
-  try {
-    const data = JSON.parse(text);
-    loadPuzzle(data);
-  } catch (err) {
-    showLoadError('Ungültiges JSON: ' + err.message);
-  }
+
+  setStatus('Kein Rätsel gefunden. Bitte eine Rätsel-URL öffnen.', 'error');
 }
 
-function showLoadError(msg) {
-  const el = document.getElementById('loadError');
-  el.textContent = msg;
-  el.classList.add('visible');
-}
 
-function hideLoadError() {
-  const el = document.getElementById('loadError');
-  el.textContent = '';
-  el.classList.remove('visible');
-}
 
 function loadPuzzle(data) {
   // Validate minimal structure
   if (!data.clues || !data.metadata) {
-    showLoadError('Ungültiges Rätselformat: "clues" und "metadata" werden benötigt.');
+    setStatus('Ungültiges Rätselformat: "clues" und "metadata" werden benötigt.', 'error');
     return;
   }
   if (!data.clues.across || !data.clues.down) {
-    showLoadError('Ungültiges Rätselformat: "clues.across" und "clues.down" werden benötigt.');
+    setStatus('Ungültiges Rätselformat: "clues.across" und "clues.down" werden benötigt.', 'error');
     return;
   }
   if (!data.grid) {
@@ -618,7 +529,6 @@ function loadPuzzle(data) {
   }
 
   puzzle = data;
-  hideLoadError();
 
   // Initialize player grid
   const rows = data.metadata.gridSize.rows;
@@ -635,9 +545,7 @@ function loadPuzzle(data) {
   buildCellMap();
 
   // Switch views
-  document.getElementById('loadScreen').style.display = 'none';
   document.getElementById('playerLayout').classList.add('active');
-  document.getElementById('headerActions').style.display = 'flex';
 
   // Set puzzle info
   document.getElementById('puzzleTitle').textContent = data.metadata.title || 'Kreuzworträtsel';
@@ -654,21 +562,6 @@ function loadPuzzle(data) {
   setStatus('Klicke auf eine Zelle oder einen Hinweis, um zu beginnen.');
 }
 
-function loadNewPuzzle() {
-  puzzle = null;
-  playerGrid = null;
-  cellMap = null;
-  selectedClue = null;
-  activePos = null;
-  checkActive = false;
-
-  document.getElementById('loadScreen').style.display = '';
-  document.getElementById('playerLayout').classList.remove('active');
-  document.getElementById('headerActions').style.display = 'none';
-  document.getElementById('fileInput').value = '';
-  document.getElementById('jsonPaste').value = '';
-  hideLoadError();
-}
 
 // ============================================================
 // CELL MAP
@@ -865,9 +758,11 @@ function onCellClick(row, col) {
         selectedClue = { direction: 'across', index: info.acrossClue };
       }
       activePos = { row: row, col: col };
+      updateActiveClueDisplays(selectedClue.direction, getSelectedClueData());
       renderGrid();
+      const proxy = document.getElementById('keyProxy');
+      if (proxy) proxy.focus();
       renderClues();
-      scrollToActiveClue();
       return;
     }
   }
@@ -884,14 +779,17 @@ function onCellClick(row, col) {
   }
 
   activePos = { row: row, col: col };
+  updateActiveClueDisplays(selectedClue ? selectedClue.direction : null, getSelectedClueData());
   renderGrid();
+  const proxy = document.getElementById('keyProxy');
+  if (proxy) proxy.focus();
   renderClues();
-  scrollToActiveClue();
 }
 
 function onClueClick(direction, index) {
   checkActive = false;
   selectedClue = { direction: direction, index: index };
+  updateActiveClueDisplays(direction, getSelectedClueData());
 
   // Move cursor to first empty cell in the word, or first cell
   const clueData = getSelectedClueData();
@@ -913,17 +811,6 @@ function onClueClick(direction, index) {
 
   renderGrid();
   renderClues();
-  scrollToActiveClue();
-}
-
-function scrollToActiveClue() {
-  if (!selectedClue) return;
-  const listId = selectedClue.direction === 'across' ? 'acrossClues' : 'downClues';
-  const list = document.getElementById(listId);
-  const activeLi = list.querySelector('li.active');
-  if (activeLi) {
-    activeLi.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
 }
 
 // ============================================================
@@ -932,6 +819,7 @@ function scrollToActiveClue() {
 
 document.addEventListener('keydown', function(e) {
   if (!puzzle || !activePos) return;
+  if (e.target === document.getElementById('keyProxy')) return;
 
   // Don't capture if focus is on an input/textarea
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -952,12 +840,14 @@ document.addEventListener('keydown', function(e) {
     advanceCursor(1);
     renderGrid();
     renderClues();
+    checkIfComplete();
     return;
   }
 
   if (key === 'Backspace') {
     e.preventDefault();
     checkActive = false;
+    clearCheckHighlights();
     if (playerGrid[activePos.row][activePos.col] !== '') {
       playerGrid[activePos.row][activePos.col] = '';
       renderGrid();
@@ -973,6 +863,7 @@ document.addEventListener('keydown', function(e) {
   if (key === 'Delete') {
     e.preventDefault();
     checkActive = false;
+    clearCheckHighlights();
     playerGrid[activePos.row][activePos.col] = '';
     renderGrid();
     return;
@@ -984,7 +875,6 @@ document.addEventListener('keydown', function(e) {
     advanceClue(e.shiftKey ? -1 : 1);
     renderGrid();
     renderClues();
-    scrollToActiveClue();
     return;
   }
 
@@ -994,7 +884,6 @@ document.addEventListener('keydown', function(e) {
     advanceClue(1);
     renderGrid();
     renderClues();
-    scrollToActiveClue();
     return;
   }
 
@@ -1018,6 +907,73 @@ document.addEventListener('keydown', function(e) {
     moveArrow(-1, 0);
     return;
   }
+});
+
+// OS Keyboard Proxy — enables native mobile keyboard on cell tap
+(function() {
+  const proxy = document.getElementById('keyProxy');
+  if (!proxy) return;
+
+  proxy.addEventListener('input', function() {
+    if (!puzzle || !activePos) { proxy.value = ''; return; }
+    const val = proxy.value;
+    proxy.value = '';
+    if (!val) return;
+    const char = val[val.length - 1].toUpperCase();
+    if (/^[A-ZÄÖÜ]$/.test(char) || char === 'ß'.toUpperCase()) {
+      const r = activePos.row, c = activePos.col;
+      checkActive = false;
+      playerGrid[r][c] = char;
+      advanceCursor(1);
+      renderGrid();
+      checkIfComplete();
+      if (typeof saveState === 'function') saveState();
+    }
+  });
+
+  proxy.addEventListener('keydown', function(e) {
+    if (!puzzle || !activePos) return;
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      const r = activePos.row, c = activePos.col;
+      if (playerGrid[r][c] !== '') {
+        playerGrid[r][c] = '';
+      } else {
+        advanceCursor(-1);
+      }
+      checkActive = false; clearCheckHighlights();
+      renderGrid();
+      if (typeof saveState === 'function') saveState();
+    } else if (e.key === 'Delete') {
+      e.preventDefault();
+      const r = activePos.row, c = activePos.col;
+      playerGrid[r][c] = '';
+      checkActive = false; clearCheckHighlights();
+      renderGrid();
+      if (typeof saveState === 'function') saveState();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      advanceClue(e.shiftKey ? -1 : 1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      advanceClue(1);
+    } else if (e.key === 'ArrowRight') { e.preventDefault(); moveArrow(0, 1); }
+      else if (e.key === 'ArrowLeft')  { e.preventDefault(); moveArrow(0, -1); }
+      else if (e.key === 'ArrowDown')  { e.preventDefault(); moveArrow(1, 0); }
+      else if (e.key === 'ArrowUp')    { e.preventDefault(); moveArrow(-1, 0); }
+  });
+})();
+
+// Active Clue Box navigation buttons
+document.getElementById('prevClueBtn').addEventListener('click', function() {
+  advanceClue(-1);
+  var proxy = document.getElementById('keyProxy');
+  if (proxy) proxy.focus();
+});
+document.getElementById('nextClueBtn').addEventListener('click', function() {
+  advanceClue(1);
+  var proxy = document.getElementById('keyProxy');
+  if (proxy) proxy.focus();
 });
 
 function advanceCursor(dir) {
@@ -1103,7 +1059,6 @@ function moveArrow(dr, dc) {
       checkActive = false;
       renderGrid();
       renderClues();
-      scrollToActiveClue();
       return;
     }
     newR += dr;
@@ -1152,6 +1107,11 @@ function extractClueAnswer(clue, direction) {
 // CHECK / RESET
 // ============================================================
 
+function clearCheckHighlights() {
+  document.querySelectorAll('.grid-cell.correct, .grid-cell.incorrect')
+    .forEach(function(el) { el.classList.remove('correct', 'incorrect'); });
+}
+
 async function checkSolution() {
   if (!puzzle) return;
 
@@ -1190,6 +1150,18 @@ async function checkSolution() {
   } else {
     setStatus('Einige Buchstaben sind noch nicht korrekt. Falsche Zellen sind rot markiert.', 'error');
   }
+}
+
+function checkIfComplete() {
+  if (!puzzle || !playerGrid) return;
+  var rows = puzzle.metadata.gridSize.rows;
+  var cols = puzzle.metadata.gridSize.cols;
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      if (puzzle.grid[r][c] !== '' && playerGrid[r][c] === '') return;
+    }
+  }
+  checkSolution();
 }
 
 async function checkSolutionHashed() {
@@ -1252,13 +1224,11 @@ function resetPuzzle() {
 // Expose functions referenced by inline event handlers
 window.checkSolution    = checkSolution;
 window.resetPuzzle      = resetPuzzle;
-window.loadNewPuzzle    = loadNewPuzzle;
-window.handleFileUpload = handleFileUpload;
-window.handlePaste      = handlePaste;
 
 init();
 
 })();
 </script>
+<input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;top:-9999px;" />
 </body>
 </html>
