@@ -327,6 +327,7 @@
   margin: 8px 0;
   height: 60px;
   flex-shrink: 0;
+  position: relative;
 }
 #activeClueBoxText {
   flex: 1;
@@ -360,7 +361,11 @@
   pointer-events: none;
   width: 1px;
   height: 1px;
-  top: -9999px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  top: 0;
+  left: 0;
 }
 </style>
 </head>
@@ -379,6 +384,7 @@
       </div>
     </div>
     <div id="activeClueBox">
+      <input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="1" />
       <button id="prevClueBtn" aria-label="Vorheriger Hinweis">&larr;</button>
       <div id="activeClueBoxText">Wähle ein Wort aus…</div>
       <button id="nextClueBtn" aria-label="Nächster Hinweis">&rarr;</button>
@@ -1238,6 +1244,6 @@ init();
 
 })();
 </script>
-<input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
+
 </body>
 </html>

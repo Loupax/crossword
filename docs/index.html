@@ -327,6 +327,7 @@
   margin: 8px 0;
   height: 60px;
   flex-shrink: 0;
+  position: relative;
 }
 #activeClueBoxText {
   flex: 1;
@@ -360,7 +361,11 @@
   pointer-events: none;
   width: 1px;
   height: 1px;
-  top: -9999px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  top: 0;
+  left: 0;
 }
 </style>
 </head>
@@ -379,6 +384,7 @@
       </div>
     </div>
     <div id="activeClueBox">
+      <input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" maxlength="1" />
       <button id="prevClueBtn" aria-label="Vorheriger Hinweis">&larr;</button>
       <div id="activeClueBoxText">Wähle ein Wort aus…</div>
       <button id="nextClueBtn" aria-label="Nächster Hinweis">&rarr;</button>
@@ -399,7 +405,7 @@
 </div>
 
 <script>
-window.__PUZZLE_DATA__ = {"metadata":{"title":"German Crossword","gridSize":{"rows":9,"cols":9},"totalWords":12,"createdAt":"2026-03-21T19:46:16.804Z"},"salt":"49163b9e61f3efc4f23a234be5560c96","clues":{"across":[{"number":1,"hint":"Erkältungssymptom","row":0,"col":3,"length":6,"hash":"68ab774d2438fe1d60a890c97442ca2cf85c3bdc5bdab6016d9d463d122b599b"},{"number":5,"hint":"Lebewesen","row":2,"col":0,"length":4,"hash":"aca44d72d2e5cf19f119c561f4d8b7516ca905ce462863d4f43cd83b9c410ab7"},{"number":6,"hint":"Übriggebliebenes","row":2,"col":5,"length":4,"hash":"2b4917a730f7aa178ef35f59620e97c3308582230353e0a9b2b35edffa3551fe"},{"number":7,"hint":"Vorwärts drängen","row":4,"col":0,"length":9,"hash":"ab00c46959e8c874b6eb3693933e79d95e5c1f2d25a9c67a965e740fe6ee04f0"},{"number":9,"hint":"Stolpergefahr","row":6,"col":0,"length":5,"hash":"6ddeac7da5331196e1253b7ad802686273593d41fdc0191b779e550f45933a8e"},{"number":10,"hint":"Riechorgan","row":8,"col":0,"length":4,"hash":"0983b5d9f9ba7d697ea85348de35ae3d6066833330072f00d095ef2fdb3c7d6c"},{"number":11,"hint":"Tiefere Bedeutung","row":8,"col":5,"length":4,"hash":"d929aa7e9e2b18759821170574fe77cba0d5e80b34151b4eec30efad9ad66da4"}],"down":[{"number":2,"hint":"Neu anfertigen","row":0,"col":7,"length":9,"hash":"533a7de41bbdbfc6921769c5f36f473b09363ad2f1bddf72a92643d9f1d5439c"},{"number":3,"hint":"Verkehrswege","row":1,"col":0,"length":8,"hash":"dea60fda427bff1a90a37209ce45aea75b80d71986b230f8c6a11a5e770f4a80"},{"number":4,"hint":"Vogelbehausung","row":1,"col":2,"length":4,"hash":"ae62ca70f450cb2138bc91d429347ab5038c071895b5cd435edc44ddbbb2ba89"},{"number":6,"hint":"Völlig sauber","row":2,"col":5,"length":4,"hash":"58409416d205137c23ae8c424bd3682772aa299066d396d3048dd4c399ff06a4"},{"number":8,"hint":"Ferne erkunden","row":4,"col":3,"length":5,"hash":"215821cee19ee38953c8ddc7e82e26511b7504cbc4a3da0e6d61339f011e59b0"}]}};
+window.__PUZZLE_DATA__ = {"metadata":{"title":"German Crossword","gridSize":{"rows":9,"cols":9},"totalWords":11,"createdAt":"2026-03-21T20:39:53.840Z"},"salt":"c9afe14c87ad032e2ba7e10765fc12ad","clues":{"across":[{"number":1,"hint":"Langsam verringern","row":0,"col":1,"length":6,"hash":"2457d857f0dd98a8921be197c07633cb91af400ff60142fe8bac13d1f9ea35b4"},{"number":5,"hint":"Deutsch-französischer Sender","row":2,"col":0,"length":4,"hash":"67cd146573dca430db3c6530e98eddbe197c9e5ad80ff3880f85f6a1e2686469"},{"number":6,"hint":"Berühmtheit","row":2,"col":5,"length":4,"hash":"5bc2fd48721db6a72ff5bb6a2ee133d93b4250f7c961b38fc11bf30ca354cdfa"},{"number":7,"hint":"Grenze überqueren","row":4,"col":0,"length":9,"hash":"7e955177058b15392e08b8ae5b31a5d0def6b1da559f83ec5b933dc0db4b34b1"},{"number":9,"hint":"Teichvogel","row":7,"col":0,"length":4,"hash":"db6172c42e4b78cedd99bc232a3159562c5cdef1f9aa6c5d8a190f3f0c3607f6"},{"number":10,"hint":"Fast berührend","row":8,"col":3,"length":4,"hash":"ebaef04bb23d100f4729218830916a753593c33743f075fb99c04cbab426d764"}],"down":[{"number":2,"hint":"Feiner Nieselschauer","row":0,"col":3,"length":9,"hash":"9084613fff31372d1a16f382847ff8904ab26c6fa496b3b1f26e4de95b3f211b"},{"number":3,"hint":"Monatliche Zahlung","row":1,"col":0,"length":4,"hash":"9cf9f885af6193b74c8ba5c85771ec325d054614beedf2c694944b8691c9bd77"},{"number":4,"hint":"Gedächtnis aktivieren","row":1,"col":8,"length":8,"hash":"0a606bb135d543f87217d40164e48383950f0685cb3518e7c06ac81e17b57227"},{"number":6,"hint":"Klettergerät","row":2,"col":5,"length":4,"hash":"a181586e43092e3a7474492932b2ba65116bdec4343321c92b3dc9cf0d92fa76"},{"number":8,"hint":"Dubliners Volk","row":4,"col":1,"length":4,"hash":"110b6753a551ec45728113b9e3523de77f30af1181cf2ae6820c3466fbc0320a"}]}};
 </script>
 <!-- __PUZZLE_DATA_INJECTION__ -->
 <script>
@@ -1241,6 +1247,6 @@ init();
 
 })();
 </script>
-<input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
+
 </body>
 </html>
