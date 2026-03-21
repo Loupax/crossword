@@ -354,6 +354,14 @@
 #prevClueBtn:hover, #nextClueBtn:hover {
   background: var(--primary-dark);
 }
+#keyProxy {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  top: -9999px;
+}
 </style>
 </head>
 <body>
@@ -916,11 +924,14 @@ document.addEventListener('keydown', function(e) {
     const val = proxy.value;
     proxy.value = '';
     if (!val) return;
-    const char = val[val.length - 1].toUpperCase();
-    if (/^[A-ZÄÖÜ]$/.test(char) || char === 'ß'.toUpperCase()) {
-      const r = activePos.row, c = activePos.col;
+    const raw = val[val.length - 1];
+    if (/^[a-zA-ZäöüÄÖÜß]$/.test(raw)) {
+      const letters = raw.toUpperCase(); // 'ß' -> 'SS' (2 chars), others -> 1 char
       checkActive = false;
-      playerGrid[r][c] = char;
+      for (let i = 0; i < letters.length; i++) {
+        playerGrid[activePos.row][activePos.col] = letters[i];
+        if (i < letters.length - 1) advanceCursor(1);
+      }
       advanceCursor(1);
       renderGrid();
       checkIfComplete();
@@ -937,6 +948,7 @@ document.addEventListener('keydown', function(e) {
         playerGrid[r][c] = '';
       } else {
         advanceCursor(-1);
+        playerGrid[activePos.row][activePos.col] = '';
       }
       checkActive = false; clearCheckHighlights();
       renderGrid();
@@ -1226,6 +1238,6 @@ init();
 
 })();
 </script>
-<input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;top:-9999px;" />
+<input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
 </body>
 </html>
