@@ -1,4 +1,5 @@
 .claude/worktrees/
+.wrangler/
 .env
 cw_*.html
 cw_*.txt
