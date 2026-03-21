@@ -549,6 +549,58 @@ func sortClues(clues []Clue) {
 }
 
 // ---------------------------------------------------------------------------
+// Word sampling
+// ---------------------------------------------------------------------------
+
+// stratifiedSample filters words that fit the grid and picks a balanced mix
+// by length bucket: short (2-4), medium (5-7), long (8+). This mirrors the
+// Node.js candidate-selector "anchors/mediums/glue" bucketing and ensures
+// enough short words are present to create intersections.
+func stratifiedSample(entries []Entry, gridSize, cap int) []Entry {
+	var short, medium, long []Entry
+	for _, e := range entries {
+		l := len(e.Word)
+		if l < 2 || l > gridSize {
+			continue
+		}
+		switch {
+		case l <= 4:
+			short = append(short, e)
+		case l <= 7:
+			medium = append(medium, e)
+		default:
+			long = append(long, e)
+		}
+	}
+
+	mathrand.Shuffle(len(short), func(i, j int) { short[i], short[j] = short[j], short[i] })
+	mathrand.Shuffle(len(medium), func(i, j int) { medium[i], medium[j] = medium[j], medium[i] })
+	mathrand.Shuffle(len(long), func(i, j int) { long[i], long[j] = long[j], long[i] })
+
+	// Target: 20% short, 50% medium, 30% long — adjust if buckets are small
+	nShort := cap / 5
+	nLong := cap * 3 / 10
+	nMedium := cap - nShort - nLong
+
+	if len(short) < nShort {
+		nShort = len(short)
+	}
+	if len(long) < nLong {
+		nLong = len(long)
+	}
+	if len(medium) < nMedium {
+		nMedium = len(medium)
+	}
+
+	result := make([]Entry, 0, nShort+nMedium+nLong)
+	result = append(result, short[:nShort]...)
+	result = append(result, medium[:nMedium]...)
+	result = append(result, long[:nLong]...)
+	mathrand.Shuffle(len(result), func(i, j int) { result[i], result[j] = result[j], result[i] })
+	return result
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -561,20 +613,10 @@ func main() {
 	entries := parseCSV(os.Stdin)
 	fmt.Fprintf(os.Stderr, "crossword-solver: read %d valid words from stdin\n", len(entries))
 
-	// Discard words that can't fit in the grid, then cap at 60 words.
-	// The CSP degrades badly beyond ~60 candidates; a large dictionary is
-	// best filtered upstream (e.g. via generate-daily's exclusion logic).
-	filtered := entries[:0]
-	for _, e := range entries {
-		if len(e.Word) >= 2 && len(e.Word) <= *size {
-			filtered = append(filtered, e)
-		}
-	}
-	entries = filtered
-	if len(entries) > 60 {
-		mathrand.Shuffle(len(entries), func(i, j int) { entries[i], entries[j] = entries[j], entries[i] })
-		entries = entries[:60]
-	}
+	// Discard words that can't fit in the grid, then pick a stratified sample.
+	// Random flat sampling produces bad mixes (e.g. all long words); stratifying
+	// by length ensures enough short "glue" words to create intersections.
+	entries = stratifiedSample(entries, *size, 60)
 	fmt.Fprintf(os.Stderr, "crossword-solver: using %d words after filter\n", len(entries))
 
 	salt, err := generateSalt()
