@@ -56,10 +56,22 @@ GOOD: BAHNHOF,"Knotenpunkt für eilige Pendler." (Punchy, singular focus, uses B
 </examples>
 
 ## Pipeline Usage
-The CSV output of this skill can be piped directly into the crossword CLI:
+
+**One-shot:** pipe this skill's output directly into the CLI:
 ```bash
 # Generate words (this skill output) → pipe to CLI → standalone HTML puzzle
-/generate-words | node cli/index.js --strategy simple --size 15 --output-dir ./output
+/generate-words | node cli/index.js --strategy backtrack --size 15 --output-dir ./puzzles/backlog
 ```
+
+**Repeatable daily generation** (tracks used words, never repeats):
+```bash
+# Uses generate-daily script; appends placed words to word_history.csv
+./generate-daily                       # B1 words, B2 hints, mixed theme
+./generate-daily --theme "Travel"      # scoped theme
+./generate-daily --level A2 --hint-level B1 --output-dir puzzles/backlog
+```
+The `generate-daily` script calls Claude with the same generation prompt used here,
+passes the full exclusion list from `word_history.csv`, then runs the CLI automatically.
+See CLAUDE.md for the full option reference.
 
 Generate the requested pairs now in CSV format:

@@ -1,24 +1,53 @@
 # TODO — German Crossword Creator
-Last updated: 2026-03-11
+Last updated: 2026-03-21
 
 ## In Progress
 (nothing currently in progress)
 
 ## Backlog
 
-### Feature: Browser State Persistence (localStorage)
+### Feature: TTL-Purge Script for word_history.csv
+- [ ] Write a script (purge-history or similar) that reads word_history.csv,
+      drops any row whose DATE column is older than a configurable TTL (e.g. 90 days),
+      and rewrites the file in-place
+- [ ] Wire it into a cron job or call it at the top of generate-daily if desired
+- [ ] Accept --ttl-days flag (default: 90) and --dry-run flag
+
+### Feature: Browser State Persistence (localStorage)  [pre-CLI era, may be obsolete]
 - [ ] Write a saveState() function that serializes state.rows, state.cols, state.words, and state.nextId to localStorage under a fixed key (e.g. "crossword_state")
 - [ ] Reconstruct the full 2D grid from the saved words on load (re-run placement data) rather than storing the raw grid array, to keep storage compact
 - [ ] Call saveState() after every mutation: addWord, deleteWord, placeWord, removeWord, resizeGrid, clearGrid, autoPlaceAll
 - [ ] Write a loadState() function that reads from localStorage, validates the shape, and restores state before initGrid/renderGrid/renderWordList
 - [ ] Add a "Reset / Start Over" button (or confirm-prompt inside clearGrid) so users have a deliberate way to wipe persisted state
 
-### Feature: Standalone HTML Export (Playable Puzzle)
-- [ ] Design the player UI: interactive grid where players type letters, a clue list (Across / Down), and a "Check Answers" button — all inline HTML/CSS/JS
-- [ ] Build a generatePlayerHTML(exportData) function in the creator that inlines the puzzle JSON (from buildExportData()) and the full player UI into a single self-contained HTML string
-- [ ] Wire up player interactivity: clicking a cell selects the word, keyboard input fills cells, Backspace clears a cell, arrow keys or second-click toggle Across/Down
-- [ ] Implement "Check Answers" in the player: compare filled letters against the answer key embedded in the HTML, highlight correct/incorrect cells
-- [ ] Add an "Export Puzzle HTML" button to the creator header that triggers download of the generated HTML file (no external dependencies, no server required)
-
 ## Completed
-(nothing completed yet)
+
+### Feature: Standalone HTML Export (Playable Puzzle)
+- [x] Interactive grid where players type letters
+- [x] Clue list (Across / Down) wired to grid navigation
+- [x] "Check Answers" with SHA-256-salted answer hashes (no spoilers in source)
+- [x] Single self-contained HTML file — no external dependencies, no server required
+- [x] Implemented in cli/html-exporter.js; output via `node cli/index.js --output-dir`
+
+### Feature: CLI Word Ingestion Pipeline
+- [x] CSV stdin reader with quoted-hint support
+- [x] CandidateSelector bucketing (anchors / mediums / glue) + letter-frequency scoring
+- [x] Multiple placement strategies: backtrack (default), greedy, simple, template
+- [x] StateManager tracks used words across runs via --exclude file
+- [x] Umlaut/Eszett normalisation (Ä→AE, Ö→OE, Ü→UE, ß→SS)
+- [x] Encoding guard rejects non-UTF-8 input
+
+### Feature: AI Word Generation
+- [x] generate_words Python script — bulk generation via Claude API (claude-opus-4-6)
+      with adaptive thinking; writes CSV files per theme/level combo
+- [x] gen Bash wrapper — pre-configured for 31 themes, 3 CEFR levels, 100 words/batch
+- [x] /generate-words Claude Code skill — interactive single-run generation at a
+      chosen word level, hint level, and optional theme
+- [x] generate-daily script — repeatable daily puzzle generator; tracks used
+      word/hint pairs with dates in word_history.csv; passes exclusion list to
+      Claude so previously used words are never regenerated
+
+### Feature: Deployment Pipeline
+- [x] scripts/deploy-daily — moves first HTML from puzzles/backlog/ to docs/index.html,
+      archives to puzzles/completed/, commits and pushes via Git
+- [x] serve — local HTTP server on port 8080 (python3 -m http.server)

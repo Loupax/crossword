@@ -1,0 +1,296 @@
+#!/usr/bin/env python3
+"""
+generate-daily — Generate a fresh German crossword puzzle, avoiding word reuse.
+
+Tracks used word/hint pairs with their date in word_history.csv.
+A separate TTL-purge script can remove old entries from that file.
+
+Usage:
+  ./generate-daily [options]
+
+Options:
+  --level        CEFR word level for the answers  (default: B1)
+  --hint-level   CEFR level for the clue language (default: B2)
+  --theme        Vocabulary theme or "None"        (default: None)
+  --output-dir   Where to write the HTML puzzle    (default: puzzles/backlog)
+  --history-file Tracking CSV file                 (default: word_history.csv)
+  --size         Grid size N×N                     (default: 15)
+  --strategy     Placement engine                  (default: backtrack)
+  --timeout      Solver time budget                (default: 5m)
+"""
+
+import os
+import re
+import sys
+import csv
+import argparse
+import subprocess
+from datetime import date
+
+import anthropic
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+SYSTEM_INSTRUCTION = """\
+Name: Schwedenrätsel Clue Maker
+
+Purpose and Goals:
+Create highly accurate, ultra-short German crossword clues suitable for a traditional
+grid (Schwedenrätsel) based on CEFR levels and themes. Hints must be cleverly cryptic,
+but the vocabulary used in the hints MUST strictly adhere to the requested CEFR Hint Level.
+
+Behaviors and Rules:
+
+1) Grid Compatibility & Spelling (CRITICAL):
+   - Divide words into 1/3 short (3-4 letters), 1/3 medium (5-7 letters), 1/3 long (8-12 letters).
+   - Strongly favor answers containing common German intersection letters (E, N, I, S, R, A, T).
+   - All ANSWERS must expand Umlaute and Eszett for a crossword grid (Ä->AE, Ö->OE, Ü->UE, ß->SS).
+     Example: FRÜHLING becomes FRUEHLING.
+
+2) Grammar Matching (CRITICAL):
+   - The part of speech of the hint MUST match the answer.
+   - Noun answer → Noun-phrase hint.
+   - Verb answer  → Infinitive-phrase hint.
+   - Adjective answer → Adjective hint.
+
+3) Schwedenrätsel Brevity (CRITICAL):
+   - Hints MUST be 1 to 3 words maximum. DO NOT use articles (der, die, das, ein, eine).
+
+4) CEFR-Calibrated Cryptic Tone (CRITICAL):
+   - Hints must induce a 'productive struggle' through lateral thinking, NOT advanced vocabulary.
+   - The vocabulary inside the hint MUST match the requested Hint Level.
+   - Do not use C1/C2 academic compound nouns if the hint level is A1, A2, or B1.
+
+5) Output Format:
+   - Output ONLY raw CSV. No markdown, no greetings, no explanation.
+   - Format: WORD,"Hint"
+   - Always use double quotes around hints. Never use single quotes.
+
+6) The "Child/Basic" Definition Rule:
+   - FORBIDDEN: words ending in '-wesen', '-stätte', '-träger', '-einheit', '-gefüge'.
+   - FORBIDDEN: Latin/Internationalisms like 'optisch', 'akustisch', 'pharmazeutisch'.
+
+7) Negative Constraints:
+   If you find yourself using a word from a law book or scientific paper, DELETE it
+   and replace it with a word from daily conversation.
+
+8) Creativity Rule (CRITICAL):
+   - DO NOT use direct dictionary definitions.
+   - DO NOT use the root of the target word in the hint.
+   - DO use situational clues, fill-in-the-blank idioms, analogies, or utility descriptions.
+   - Emulate real crossword puzzles: single-focus sentence fragments, punchy and lateral.
+"""
+
+
+# ---------------------------------------------------------------------------
+# History helpers
+# ---------------------------------------------------------------------------
+
+def load_excluded(history_file):
+    """Return a set of already-used words (uppercased) from the history CSV."""
+    excluded = set()
+    if not os.path.exists(history_file):
+        return excluded
+    with open(history_file, encoding="utf-8", newline="") as fh:
+        reader = csv.reader(fh)
+        for row in reader:
+            if row:
+                excluded.add(row[0].strip().upper())
+    return excluded
+
+
+def append_history(history_file, placed_words, hint_map, today):
+    """Append placed WORD,HINT,DATE rows to the history file."""
+    with open(history_file, "a", encoding="utf-8", newline="") as fh:
+        writer = csv.writer(fh)
+        for word in placed_words:
+            hint = hint_map.get(word, "")
+            writer.writerow([word, hint, str(today)])
+
+
+# ---------------------------------------------------------------------------
+# Claude word generation
+# ---------------------------------------------------------------------------
+
+def call_claude(word_level, hint_level, theme, excluded, client):
+    """Ask Claude for 30 word/hint pairs, listing excluded words explicitly."""
+    exclusion_block = ""
+    if excluded:
+        exclusion_block = (
+            "\n\nEXCLUSION LIST — Do NOT generate any of these words "
+            "(they have already been used):\n"
+            + ", ".join(sorted(excluded))
+            + "\n"
+        )
+
+    prompt = (
+        f"Generate exactly 30 German crossword word-and-hint pairs.\n"
+        f"Target Word Level: {word_level} (CEFR)\n"
+        f"Hint Level: {hint_level} (CEFR)\n"
+        f"Language of Words: German\n"
+        f"Language of Hints: German\n"
+        f"Theme: {theme}\n\n"
+        f"LENGTH QUOTAS (STRICT):\n"
+        f"- Exactly 10 short 'glue' words (3-4 letters)\n"
+        f"- Exactly 10 medium words (5-7 letters)\n"
+        f"- Exactly 10 long anchor words (8-12 letters)\n\n"
+        f"Favor common German intersection letters: E, N, I, S, R, A, T.\n"
+        f"Do NOT generate any word longer than 15 letters.\n"
+        f"Output ONLY raw CSV. Format: WORD,\"Hint\""
+        + exclusion_block
+    )
+
+    response = client.messages.create(
+        model="claude-opus-4-6",
+        max_tokens=4096,
+        system=SYSTEM_INSTRUCTION,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    for block in response.content:
+        if block.type == "text":
+            return block.text.strip()
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# CSV parsing / filtering
+# ---------------------------------------------------------------------------
+
+def parse_csv_text(raw):
+    """Parse raw CSV text into a {word: hint} dict."""
+    pairs = {}
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line or line.startswith("`") or line.startswith("#"):
+            continue
+        idx = line.find(",")
+        if idx == -1:
+            continue
+        word = line[:idx].strip().upper()
+        hint = line[idx + 1:].strip()
+        if hint.startswith('"') and hint.endswith('"'):
+            hint = hint[1:-1]
+        # Accept only plain uppercase ASCII letters (post-umlaut-expansion form)
+        if word and re.match(r"^[A-Z]+$", word):
+            pairs[word] = hint
+    return pairs
+
+
+def to_csv_text(hint_map):
+    """Serialise {word: hint} back to CSV lines for the CLI."""
+    return "\n".join(f'{w},"{h}"' for w, h in hint_map.items()) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# CLI subprocess
+# ---------------------------------------------------------------------------
+
+def run_cli(csv_text, output_dir, size, strategy, timeout):
+    """
+    Pipe csv_text into node cli/index.js, return (base_name, [placed_words]).
+    The CLI's own exclusion is bypassed (/dev/null) because we handle it here.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    result = subprocess.run(
+        [
+            "node", "cli/index.js",
+            "--strategy", strategy,
+            "--size", str(size),
+            "--output-dir", output_dir,
+            "--exclude", "/dev/null",   # we handle deduplication ourselves
+            "--timeout", timeout,
+        ],
+        input=csv_text.encode("utf-8"),
+        capture_output=True,
+        cwd=SCRIPT_DIR,
+    )
+
+    stdout = result.stdout.decode("utf-8").strip()
+    stderr = result.stderr.decode("utf-8").strip()
+
+    if stderr:
+        print(stderr, file=sys.stderr)
+    if result.returncode != 0:
+        print("[ERROR] CLI exited with non-zero status.", file=sys.stderr)
+        sys.exit(1)
+
+    print(stdout)
+
+    # CLI prints: "Generated: cw_XXXX (N words placed)"
+    match = re.search(r"Generated:\s+(cw_[0-9a-f]+)", stdout)
+    if not match:
+        print("[WARN] Could not parse output filename from CLI stdout.", file=sys.stderr)
+        return None, []
+
+    base = match.group(1)
+    txt_path = os.path.join(output_dir, base + ".txt")
+    if not os.path.exists(txt_path):
+        return base, []
+
+    with open(txt_path, encoding="utf-8") as fh:
+        placed = [w.strip().upper() for w in fh if w.strip()]
+
+    return base, placed
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate a daily crossword puzzle, tracking used words."
+    )
+    parser.add_argument("--level",        default="B1",              help="CEFR word level (default: B1)")
+    parser.add_argument("--hint-level",   default="B2",              help="CEFR hint level (default: B2)")
+    parser.add_argument("--theme",        default="None",            help='Vocabulary theme or "None" (default: None)')
+    parser.add_argument("--output-dir",   default="puzzles/backlog", help="Output directory (default: puzzles/backlog)")
+    parser.add_argument("--history-file", default="word_history.csv",help="History CSV (default: word_history.csv)")
+    parser.add_argument("--size",   type=int, default=15,            help="Grid size N×N (default: 15)")
+    parser.add_argument("--strategy",     default="backtrack",       help="Placement engine (default: backtrack)")
+    parser.add_argument("--timeout",      default="5m",              help="Solver time budget (default: 5m)")
+    args = parser.parse_args()
+
+    # Resolve paths relative to the project root
+    def abspath(p):
+        return p if os.path.isabs(p) else os.path.join(SCRIPT_DIR, p)
+
+    history_file = abspath(args.history_file)
+    output_dir   = abspath(args.output_dir)
+
+    # 1. Load previously used words
+    excluded = load_excluded(history_file)
+    print(f"[INFO] {len(excluded)} words excluded from history ({os.path.basename(history_file)})")
+
+    # 2. Generate words via Claude
+    print(f"[INFO] Generating words  level={args.level}  hints={args.hint_level}  theme={args.theme}")
+    client = anthropic.Anthropic()
+    raw = call_claude(args.level, args.hint_level, args.theme, excluded, client)
+
+    # 3. Parse + filter
+    hint_map = parse_csv_text(raw)
+    before = len(hint_map)
+    hint_map = {w: h for w, h in hint_map.items() if w not in excluded}
+    print(f"[INFO] {before} words generated, {len(hint_map)} remaining after exclusion filter")
+
+    if not hint_map:
+        print("[ERROR] No words left after filtering. Clear old history entries or broaden theme.", file=sys.stderr)
+        sys.exit(1)
+
+    # 4. Build puzzle
+    print(f"[INFO] Building {args.size}×{args.size} grid  strategy={args.strategy}  timeout={args.timeout}")
+    base, placed = run_cli(to_csv_text(hint_map), output_dir, args.size, args.strategy, args.timeout)
+
+    if not placed:
+        print("[WARN] No placed-word list found; history not updated.")
+        return
+
+    # 5. Record placed words in history
+    append_history(history_file, placed, hint_map, date.today())
+    print(f"[INFO] Recorded {len(placed)} words → {history_file}")
+    print(f"[DONE] {os.path.join(output_dir, base + '.html')}")
+
+
+if __name__ == "__main__":
+    main()
