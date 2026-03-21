@@ -505,7 +505,7 @@
 </div>
 
 <script>
-window.__PUZZLE_DATA__ = {"metadata":{"title":"German Crossword","gridSize":{"rows":9,"cols":9},"totalWords":11,"createdAt":"2026-03-18T21:38:47.754Z"},"salt":"e073392f5475f250a45da9a0059f1c8d","clues":{"across":[{"number":1,"hint":"'sauber gemacht'","row":0,"col":0,"length":9,"hash":"e8c21bc64d8530dd76dd8aaa7757d536c3a6b3f26304c447ebdf11f203dc827c"},{"number":3,"hint":"'Abwesenheit bedauern'","row":2,"col":0,"length":9,"hash":"1dadaf8110b82eed37cde75032cd5056e03091f7ef57bd17d743adbfc8507ab4"},{"number":6,"hint":"'eine Strafe erteilen'","row":4,"col":0,"length":9,"hash":"0ebc96c3c333d0c1c953e03ba6e2280475de705bfd1be65c4702593af6ebb5b6"},{"number":7,"hint":"'Geld nach dem Tod'","row":6,"col":0,"length":4,"hash":"f8c5bb28ff6068bf63e3967a7f4e58a8a968e7dcc7fddbfe354ee35bb5c67aaf"},{"number":8,"hint":"'berufliche Gruppe'","row":6,"col":5,"length":4,"hash":"dc4cc680ae9f07a2fac52ffd5dc114619e89dd6545f937989b19fc7a2c3125f1"},{"number":9,"hint":"'internationale Kontonummer'","row":8,"col":0,"length":4,"hash":"b60a10ba06003a60288b052ed4f8a2fa353a51c5bbf49082b733d6d8a406f11b"},{"number":10,"hint":"'großer Wasservogel'","row":8,"col":5,"length":4,"hash":"53506d9b8f1fe9ee7712385aef80edfe8e46bba38a1cc61474ce20d1ce9945fa"}],"down":[{"number":2,"hint":"'nach Fakten suchen'","row":0,"col":3,"length":9,"hash":"727191ce13cbdac708958e45331d1cf37443e49f82c8fc50b16e0a3d67ec264f"},{"number":4,"hint":"'Bild vom Dokument'","row":2,"col":5,"length":4,"hash":"910f9c78ce5e4a5a7fd3ac36ded5f9e940f4d7ef8ed987084b423c47a6ac976e"},{"number":5,"hint":"'vermählter Partner'","row":2,"col":7,"length":7,"hash":"6dc21bf5b64fd8405abee9b2e2fe1c0518848a20075ec692914af14b270a3a76"},{"number":6,"hint":"'großer Honigfresser'","row":4,"col":0,"length":4,"hash":"3a9b31de474361670477636e102c49eb5253d5d2c796d2dacf4e2ce5d622c0e1"}]}};
+window.__PUZZLE_DATA__ = {"metadata":{"title":"German Crossword","gridSize":{"rows":9,"cols":9},"totalWords":12,"createdAt":"2026-03-21T19:46:16.804Z"},"salt":"49163b9e61f3efc4f23a234be5560c96","clues":{"across":[{"number":1,"hint":"Erkältungssymptom","row":0,"col":3,"length":6,"hash":"68ab774d2438fe1d60a890c97442ca2cf85c3bdc5bdab6016d9d463d122b599b"},{"number":5,"hint":"Lebewesen","row":2,"col":0,"length":4,"hash":"aca44d72d2e5cf19f119c561f4d8b7516ca905ce462863d4f43cd83b9c410ab7"},{"number":6,"hint":"Übriggebliebenes","row":2,"col":5,"length":4,"hash":"2b4917a730f7aa178ef35f59620e97c3308582230353e0a9b2b35edffa3551fe"},{"number":7,"hint":"Vorwärts drängen","row":4,"col":0,"length":9,"hash":"ab00c46959e8c874b6eb3693933e79d95e5c1f2d25a9c67a965e740fe6ee04f0"},{"number":9,"hint":"Stolpergefahr","row":6,"col":0,"length":5,"hash":"6ddeac7da5331196e1253b7ad802686273593d41fdc0191b779e550f45933a8e"},{"number":10,"hint":"Riechorgan","row":8,"col":0,"length":4,"hash":"0983b5d9f9ba7d697ea85348de35ae3d6066833330072f00d095ef2fdb3c7d6c"},{"number":11,"hint":"Tiefere Bedeutung","row":8,"col":5,"length":4,"hash":"d929aa7e9e2b18759821170574fe77cba0d5e80b34151b4eec30efad9ad66da4"}],"down":[{"number":2,"hint":"Neu anfertigen","row":0,"col":7,"length":9,"hash":"533a7de41bbdbfc6921769c5f36f473b09363ad2f1bddf72a92643d9f1d5439c"},{"number":3,"hint":"Verkehrswege","row":1,"col":0,"length":8,"hash":"dea60fda427bff1a90a37209ce45aea75b80d71986b230f8c6a11a5e770f4a80"},{"number":4,"hint":"Vogelbehausung","row":1,"col":2,"length":4,"hash":"ae62ca70f450cb2138bc91d429347ab5038c071895b5cd435edc44ddbbb2ba89"},{"number":6,"hint":"Völlig sauber","row":2,"col":5,"length":4,"hash":"58409416d205137c23ae8c424bd3682772aa299066d396d3048dd4c399ff06a4"},{"number":8,"hint":"Ferne erkunden","row":4,"col":3,"length":5,"hash":"215821cee19ee38953c8ddc7e82e26511b7504cbc4a3da0e6d61339f011e59b0"}]}};
 </script>
 <!-- __PUZZLE_DATA_INJECTION__ -->
 <script>
@@ -536,7 +536,56 @@ async function sha256hex(message) {
 
 function init() {
   if (typeof window.__PUZZLE_DATA__ !== 'undefined') {
+    const STORAGE_KEY = 'crossword-save-' + window.__PUZZLE_DATA__.salt;
+
+    // Garbage collect stale puzzle saves
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('crossword-save-') && k !== STORAGE_KEY)
+      .forEach(k => localStorage.removeItem(k));
+
+    // State helpers
+    // Note: this player stores letters in the playerGrid 2D array (not DOM inputs).
+    // saveState serializes playerGrid directly; loadState restores it and re-renders.
+    function saveState() {
+      if (!playerGrid) return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(playerGrid));
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      try {
+        const saved = JSON.parse(raw);
+        if (!Array.isArray(saved)) return;
+        for (let r = 0; r < playerGrid.length; r++) {
+          if (!Array.isArray(saved[r])) continue;
+          for (let c = 0; c < playerGrid[r].length; c++) {
+            if (typeof saved[r][c] === 'string') {
+              playerGrid[r][c] = saved[r][c];
+            }
+          }
+        }
+        renderGrid();
+      } catch (e) { console.error('Failed to load corrupt state from localStorage:', e); }
+    }
+
     loadPuzzle(window.__PUZZLE_DATA__);
+    loadState();
+
+    // Auto-save on any keydown that modifies the grid
+    document.addEventListener('keydown', function(e) {
+      if (!puzzle || !activePos) return;
+      const key = e.key;
+      if (
+        (key.length === 1 && /^[a-zA-ZäöüÄÖÜß]$/.test(key)) ||
+        key === 'Backspace' ||
+        key === 'Delete'
+      ) {
+        // Save after the existing keydown handler has updated playerGrid
+        setTimeout(saveState, 0);
+      }
+    });
+
     return;
   }
 
