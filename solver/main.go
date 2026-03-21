@@ -608,6 +608,7 @@ func main() {
 	size := flag.Int("size", 15, "Grid N×N")
 	timeoutSec := flag.Int("timeout", 120, "Solver budget in seconds")
 	title := flag.String("title", "German Crossword", "Puzzle title")
+	words := flag.Int("words", 60, "Number of candidate words to sample from the dictionary")
 	flag.Parse()
 
 	entries := parseCSV(os.Stdin)
@@ -616,7 +617,7 @@ func main() {
 	// Discard words that can't fit in the grid, then pick a stratified sample.
 	// Random flat sampling produces bad mixes (e.g. all long words); stratifying
 	// by length ensures enough short "glue" words to create intersections.
-	entries = stratifiedSample(entries, *size, 60)
+	entries = stratifiedSample(entries, *size, *words)
 	fmt.Fprintf(os.Stderr, "crossword-solver: using %d words after filter\n", len(entries))
 
 	salt, err := generateSalt()
