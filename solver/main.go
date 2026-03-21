@@ -11,8 +11,11 @@ import (
 	"io"
 	mathrand "math/rand"
 	"os"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
+	"context"
 )
 
 // ---------------------------------------------------------------------------
@@ -200,21 +203,21 @@ func (g *Grid) place(word string, row, col int, dir byte) {
 // ---------------------------------------------------------------------------
 
 type candidate struct {
-	row, col     int
-	dir          byte
+	row, col      int
+	dir           byte
 	intersections int
 }
 
 type solver struct {
-	n          int
-	timeout    time.Duration
-	start      time.Time
-	best       []Placement
-	bestCount  int
+	n         int
+	ctx       context.Context
+	rng       *mathrand.Rand
+	best      []Placement
+	bestCount int
 }
 
-func newSolver(n int, timeout time.Duration) *solver {
-	return &solver{n: n, timeout: timeout}
+func newSolver(ctx context.Context, n int, rng *mathrand.Rand) *solver {
+	return &solver{n: n, ctx: ctx, rng: rng}
 }
 
 // candidatesFor returns all valid placements for word in grid that have at
@@ -236,7 +239,7 @@ func (s *solver) candidatesFor(g *Grid, word string, minIntersect int) []candida
 		}
 	}
 	// Shuffle for layout variety, then stable-sort descending by intersections
-	mathrand.Shuffle(len(out), func(i, j int) { out[i], out[j] = out[j], out[i] })
+	s.rng.Shuffle(len(out), func(i, j int) { out[i], out[j] = out[j], out[i] })
 	// Insertion sort descending by intersections (small slices, fast enough)
 	for i := 1; i < len(out); i++ {
 		for j := i; j > 0 && out[j].intersections > out[j-1].intersections; j-- {
@@ -248,7 +251,6 @@ func (s *solver) candidatesFor(g *Grid, word string, minIntersect int) []candida
 
 // solve runs backtracking CSP and returns the best placement list found.
 func (s *solver) solve(entries []Entry) []Placement {
-	s.start = time.Now()
 	s.best = nil
 	s.bestCount = 0
 
@@ -266,7 +268,12 @@ func (s *solver) solve(entries []Entry) []Placement {
 }
 
 func (s *solver) timedOut() bool {
-	return time.Since(s.start) >= s.timeout
+	select {
+	case <-s.ctx.Done():
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *solver) backtrack(g *Grid, placed []Placement, remaining []Entry, isFirst bool) bool {
@@ -601,6 +608,54 @@ func stratifiedSample(entries []Entry, gridSize, cap int) []Entry {
 }
 
 // ---------------------------------------------------------------------------
+// Parallel workers
+// ---------------------------------------------------------------------------
+
+type sharedBest struct {
+	mu          sync.Mutex
+	placements  []Placement
+	letterCount int
+}
+
+func (sb *sharedBest) update(placements []Placement, g *Grid) {
+	count := 0
+	for _, b := range g.Data {
+		if b != 0x00 {
+			count++
+		}
+	}
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	if count > sb.letterCount {
+		sb.letterCount = count
+		sb.placements = placements
+	}
+}
+
+func runWorker(ctx context.Context, id int, entries []Entry, gridN int, best *sharedBest, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	// Each worker gets its own shuffled copy and PRNG
+	rng := mathrand.New(mathrand.NewSource(time.Now().UnixNano() + int64(id)))
+	local := make([]Entry, len(entries))
+	copy(local, entries)
+	rng.Shuffle(len(local), func(i, j int) { local[i], local[j] = local[j], local[i] })
+
+	s := newSolver(ctx, gridN, rng)
+	placements := s.solve(local)
+
+	if len(placements) == 0 {
+		return
+	}
+	// Reconstruct final grid to count letters for comparison
+	g := newGrid(gridN)
+	for _, p := range placements {
+		g.place(p.Word, p.Row, p.Col, p.Dir)
+	}
+	best.update(placements, g)
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -609,7 +664,13 @@ func main() {
 	timeoutSec := flag.Int("timeout", 120, "Solver budget in seconds")
 	title := flag.String("title", "German Crossword", "Puzzle title")
 	words := flag.Int("words", 60, "Number of candidate words to sample from the dictionary")
+	workers := flag.Int("workers", 0, "Parallel solver goroutines (0 = runtime.NumCPU())")
 	flag.Parse()
+
+	numWorkers := *workers
+	if numWorkers <= 0 {
+		numWorkers = runtime.NumCPU()
+	}
 
 	entries := parseCSV(os.Stdin)
 	fmt.Fprintf(os.Stderr, "crossword-solver: read %d valid words from stdin\n", len(entries))
@@ -626,8 +687,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	s := newSolver(*size, time.Duration(*timeoutSec)*time.Second)
-	placements := s.solve(entries)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(*timeoutSec)*time.Second)
+	defer cancel()
+
+	fmt.Fprintf(os.Stderr, "crossword-solver: spawning %d workers\n", numWorkers)
+
+	best := &sharedBest{}
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go runWorker(ctx, i, entries, *size, best, &wg)
+	}
+	wg.Wait()
+
+	placements := best.placements
 
 	fmt.Fprintf(os.Stderr, "crossword-solver: placed %d/%d words\n", len(placements), len(entries))
 
