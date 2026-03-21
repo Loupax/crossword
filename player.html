@@ -536,14 +536,9 @@ function init() {
     const STORAGE_KEY = 'crossword-save-' + window.__PUZZLE_DATA__.salt;
 
     // Garbage collect stale puzzle saves
-    const keysToDelete = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('crossword-save-') && k !== STORAGE_KEY) {
-        keysToDelete.push(k);
-      }
-    }
-    keysToDelete.forEach(k => localStorage.removeItem(k));
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('crossword-save-') && k !== STORAGE_KEY)
+      .forEach(k => localStorage.removeItem(k));
 
     // State helpers
     // Note: this player stores letters in the playerGrid 2D array (not DOM inputs).
@@ -559,16 +554,16 @@ function init() {
       try {
         const saved = JSON.parse(raw);
         if (!Array.isArray(saved)) return;
-        for (let r = 0; r < saved.length; r++) {
+        for (let r = 0; r < playerGrid.length; r++) {
           if (!Array.isArray(saved[r])) continue;
-          for (let c = 0; c < saved[r].length; c++) {
-            if (playerGrid[r] && saved[r][c]) {
+          for (let c = 0; c < playerGrid[r].length; c++) {
+            if (typeof saved[r][c] === 'string') {
               playerGrid[r][c] = saved[r][c];
             }
           }
         }
         renderGrid();
-      } catch (e) { /* ignore corrupt state */ }
+      } catch (e) { console.error('Failed to load corrupt state from localStorage:', e); }
     }
 
     loadPuzzle(window.__PUZZLE_DATA__);

@@ -38,7 +38,7 @@ console.log(`Rotated: puzzles/backlog/${chosen} → puzzles/completed/${chosen}`
 
 // Git
 try {
-  execSync('git add docs/index.html puzzles/backlog/ puzzles/completed/', { cwd: ROOT, stdio: 'inherit' });
+  execSync(`git add docs/index.html puzzles/completed/${chosen} puzzles/backlog/${chosen}`, { cwd: ROOT, stdio: 'inherit' });
   execSync('git commit -m "chore: daily puzzle rotation"', { cwd: ROOT, stdio: 'inherit' });
   execSync('git push', { cwd: ROOT, stdio: 'inherit' });
   console.log('Git: committed and pushed');
