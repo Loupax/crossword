@@ -13,6 +13,16 @@ Last updated: 2026-03-21
 - [ ] Add swipe gestures to the Active Clue Box to cycle words.
 - [ ] Implement 'Focus Zoom' to automatically center the active word on small screens.
 
+### Feature: generate-daily — Static Word List Support
+- [ ] Allow generate-daily to draw from a pre-generated CSV word list (e.g. words/ directory)
+      instead of calling the LLM on every run, making offline/cost-free generation possible
+- [ ] Add --word-file flag to specify a CSV source; fall back to LLM generation only when
+      the file is exhausted or not provided
+- [ ] Filter the static list against word_history.csv exclusions before use
+- [ ] word_history.csv deduplication should only apply when using local/static word lists;
+      LLM-generated runs already handle exclusion via prompt — history tracking is redundant
+      and wasteful there
+
 ### Feature: TTL-Purge Script for word_history.csv
 - [ ] Write a script (purge-history or similar) that reads word_history.csv,
       drops any row whose DATE column is older than a configurable TTL (e.g. 90 days),
