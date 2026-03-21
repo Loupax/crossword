@@ -21,7 +21,7 @@ A self-contained toolchain for generating, solving, and publishing German crossw
 - [Word History & Deduplication](#word-history--deduplication)
 - [Placement Strategies](#placement-strategies)
 - [Template Strategy](#template-strategy)
-- [Deployment to GitHub Pages](#deployment-to-github-pages)
+- [Deployment to Cloudflare Pages](#deployment-to-cloudflare-pages)
 - [Directory Structure](#directory-structure)
 
 ---
@@ -31,6 +31,7 @@ A self-contained toolchain for generating, solving, and publishing German crossw
 - **Node.js** v18+ (for the CLI generator and deploy script)
 - **Python 3.10+** (for `generate-daily` and `generate_words`)
 - **Anthropic API key** (for `generate-daily` and `generate_words`)
+- **Wrangler CLI** (for `scripts/deploy-daily` — Cloudflare Pages deployment)
 
 Install the Python dependency:
 
@@ -57,6 +58,12 @@ ANTHROPIC_API_KEY=sk-ant-...
 source .env
 # or, for a single command:
 set -a && source .env && set +a
+```
+
+Install Wrangler globally (for deployment):
+
+```bash
+npm i -g wrangler
 ```
 
 Make sure the shebang scripts are executable (they should already be):
@@ -101,7 +108,7 @@ This calls Claude to generate fresh German word/hint pairs, builds a 15×15 puzz
 ./scripts/deploy-daily
 ```
 
-This takes the first puzzle from `puzzles/backlog/`, copies it to `docs/index.html`, and commits + pushes to GitHub Pages.
+This takes the first puzzle from `puzzles/backlog/`, copies it to `docs/index.html`, commits the rotation locally, and deploys `docs/` to Cloudflare Pages.
 
 ---
 
@@ -296,7 +303,7 @@ node cli/index.js --size 15 < crossword_Travel_B1_B1.csv
 
 ### Deploy Script (`scripts/deploy-daily`)
 
-Rotates the next puzzle from the backlog to the live GitHub Pages site.
+Rotates the next puzzle from the backlog and publishes it to Cloudflare Pages.
 
 ```bash
 ./scripts/deploy-daily
@@ -305,11 +312,19 @@ Rotates the next puzzle from the backlog to the live GitHub Pages site.
 **What it does:**
 
 1. Reads `puzzles/backlog/` and picks the first `.html` file (FIFO — alphabetical order)
-2. Copies it to `docs/index.html` (served by GitHub Pages)
+2. Copies it to `docs/index.html`
 3. Moves the file to `puzzles/completed/`
-4. Runs `git add docs/index.html`, commits with message `chore: daily puzzle rotation`, and pushes
+4. Commits the rotation (`puzzles/backlog` + `puzzles/completed`) locally
+5. Runs `wrangler pages deploy docs/ --project-name crossword`
 
-Exits with an error if the backlog is empty.
+Exits with an error if the backlog is empty or the deploy fails.
+
+**One-time Cloudflare setup:**
+
+```bash
+wrangler login                              # authenticate via browser
+wrangler pages project create crossword    # create the project (first time only)
+```
 
 **Typical daily workflow:**
 
@@ -461,16 +476,25 @@ A default template is included at `cli/strategies/default.template`.
 
 ---
 
-## Deployment to GitHub Pages
+## Deployment to Cloudflare Pages
 
-The project deploys to GitHub Pages from the `docs/` directory.
+Puzzles are deployed to Cloudflare Pages from the `docs/` directory. The repo can remain private.
 
-1. Enable GitHub Pages in your repo settings → set source to `docs/` on `main`
-2. Fill the backlog:
+**One-time setup:**
+
+```bash
+npm i -g wrangler
+wrangler login
+wrangler pages project create crossword
+```
+
+**Daily workflow:**
+
+1. Fill the backlog:
    ```bash
    ./generate-daily   # repeat as many times as needed
    ```
-3. Deploy one puzzle at a time:
+2. Deploy one puzzle at a time:
    ```bash
    ./scripts/deploy-daily
    ```
@@ -504,12 +528,12 @@ crossword/
 │       └── default.template  # Default ASCII grid template
 │
 ├── scripts/
-│   └── deploy-daily        # Rotates backlog → docs/index.html → git push
+│   └── deploy-daily        # Rotates backlog → docs/index.html → Cloudflare Pages
 │
 ├── puzzles/
 │   ├── backlog/            # Generated puzzles waiting to be deployed
 │   └── completed/          # Deployed puzzles archive
 │
 └── docs/
-    └── index.html          # Live GitHub Pages puzzle (updated by deploy-daily)
+    └── index.html          # Live puzzle (deployed to Cloudflare Pages by deploy-daily)
 ```
