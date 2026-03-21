@@ -6,9 +6,9 @@
 <title>Kreuzworträtsel-Spieler</title>
 <style>
   :root {
-    --primary: #2c5f8a;
-    --primary-light: #3a7cb8;
-    --primary-dark: #1e4060;
+    --primary: #007bff;
+    --primary-light: #3a8fd8;
+    --primary-dark: #0056b3;
     --accent: #e8a838;
     --accent-light: #f0c060;
     --success: #4caf50;
@@ -19,12 +19,12 @@
     --text: #2c3e50;
     --text-light: #7f8c8d;
     --border: #dce1e6;
-    --cell-size: 36px;
-    --highlight: #fff3cd;
+    --cell-size: clamp(28px, 5vw, 42px);
     --valid-highlight: rgba(76, 175, 80, 0.25);
     --invalid-highlight: rgba(231, 76, 60, 0.25);
-    --selected-cell: #b3d4fc;
-    --active-cell: #6baed6;
+    --selected-cell: #e7f1ff;
+    --active-cell: #007bff;
+    --text-on-primary: #ffffff;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -36,31 +36,6 @@
     line-height: 1.5;
   }
 
-  header {
-    background: var(--primary);
-    color: white;
-    padding: 16px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  }
-
-  header h1 {
-    font-size: 1.4rem;
-    font-weight: 600;
-  }
-
-  header .subtitle {
-    font-size: 0.85rem;
-    opacity: 0.8;
-    font-weight: 400;
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 8px;
-  }
 
   /* Buttons */
   .btn {
@@ -112,105 +87,11 @@
     cursor: not-allowed;
   }
 
-  /* Load screen */
-  .load-screen {
-    max-width: 600px;
-    margin: 60px auto;
-    padding: 32px;
-    background: var(--surface);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  }
-
-  .load-screen h2 {
-    font-size: 1.3rem;
-    margin-bottom: 24px;
-    color: var(--primary);
-  }
-
-  .load-section {
-    margin-bottom: 24px;
-  }
-
-  .load-section label {
-    display: block;
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--text);
-  }
-
-  .load-section input[type="file"] {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    border: 2px dashed var(--border);
-    border-radius: 8px;
-    background: var(--bg);
-    cursor: pointer;
-    font-size: 0.9rem;
-  }
-
-  .load-section input[type="file"]:hover {
-    border-color: var(--primary-light);
-  }
-
-  .load-section textarea {
-    width: 100%;
-    height: 150px;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 0.85rem;
-    resize: vertical;
-  }
-
-  .load-section textarea:focus {
-    outline: none;
-    border-color: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(58, 124, 184, 0.15);
-  }
-
-  .load-divider {
-    text-align: center;
-    color: var(--text-light);
-    font-size: 0.85rem;
-    margin: 16px 0;
-    position: relative;
-  }
-
-  .load-divider::before,
-  .load-divider::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 40%;
-    height: 1px;
-    background: var(--border);
-  }
-  .load-divider::before { left: 0; }
-  .load-divider::after { right: 0; }
-
-  .load-error {
-    color: var(--danger);
-    font-size: 0.85rem;
-    margin-top: 8px;
-    display: none;
-  }
-
-  .load-error.visible {
-    display: block;
-  }
 
   /* Player layout */
   .player-layout {
     display: none;
     gap: 24px;
-    padding: 20px;
-    max-width: 1400px;
-    margin: 0 auto;
     align-items: flex-start;
   }
 
@@ -224,7 +105,6 @@
 
   .clues-panel {
     flex: 1;
-    min-width: 280px;
     display: flex;
     gap: 20px;
   }
@@ -236,8 +116,6 @@
     border: 1px solid var(--border);
     box-shadow: 0 1px 4px rgba(0,0,0,0.06);
     padding: 16px;
-    max-height: 80vh;
-    overflow-y: auto;
   }
 
   .clue-section h3 {
@@ -267,7 +145,7 @@
   }
 
   .clue-list li.active {
-    background: var(--highlight);
+    background: var(--selected-cell);
     font-weight: 600;
   }
 
@@ -281,6 +159,7 @@
   .grid-container {
     overflow: auto;
     padding: 16px;
+    text-align: center;
     background: var(--surface);
     border-radius: 8px;
     border: 1px solid var(--border);
@@ -357,13 +236,6 @@
     color: var(--primary-dark);
   }
 
-  /* Toolbar below grid */
-  .player-toolbar {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-  }
 
   /* Status / message bar */
   .status-bar {
@@ -404,76 +276,97 @@
     margin-bottom: 12px;
   }
 
-  /* Responsive */
-  @media (max-width: 900px) {
-    .player-layout.active {
-      flex-direction: column;
-    }
-
-    .clues-panel {
-      flex-direction: column;
-      min-width: 0;
-      width: 100%;
-    }
-
-    .clue-section {
-      max-height: none;
-    }
+  /* Mobile-first base */
+  .player-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 8px;
+  }
+  .clues-panel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+  .clue-section {
+    max-height: none;
+    overflow-y: visible;
+  }
+  .grid-container {
+    overflow-x: auto;
   }
 
-  @media (max-width: 500px) {
-    header {
-      flex-direction: column;
-      gap: 8px;
-      text-align: center;
-    }
-
-    .load-screen {
-      margin: 20px 12px;
+  /* Tablet and up */
+  @media (min-width: 768px) {
+    .player-layout {
+      flex-direction: row;
+      align-items: flex-start;
       padding: 20px;
     }
-
-    .player-layout.active {
-      padding: 12px;
+    .clues-panel {
+      flex: 1 1 0;
+      min-width: 280px;
+    }
+    .clue-section {
+      max-height: 80vh;
+      overflow-y: auto;
     }
   }
+
+#activeClueBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--selected-cell);
+  border: 2px solid var(--primary);
+  border-radius: 6px;
+  padding: 0 12px;
+  margin: 8px 0;
+  height: 60px;
+  flex-shrink: 0;
+}
+#activeClueBoxText {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+#prevClueBtn, #nextClueBtn {
+  flex: 0 0 auto;
+  background: var(--primary);
+  color: var(--text-on-primary);
+  border: none;
+  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#prevClueBtn:hover, #nextClueBtn:hover {
+  background: var(--primary-dark);
+}
+#keyProxy {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  top: -9999px;
+}
 </style>
 </head>
 <body>
 
-<header>
-  <div>
-    <h1>Kreuzworträtsel-Spieler</h1>
-    <span class="subtitle">Deutsches Kreuzworträtsel lösen</span>
-  </div>
-  <div class="header-actions" id="headerActions" style="display:none;">
-    <button class="btn btn-accent" onclick="checkSolution()">Lösung prüfen</button>
-    <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="resetPuzzle()">Zurücksetzen</button>
-    <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="loadNewPuzzle()">Neues Rätsel</button>
-  </div>
-</header>
 
-<!-- Load screen -->
-<div class="load-screen" id="loadScreen">
-  <h2>Kreuzworträtsel laden</h2>
-
-  <div class="load-section">
-    <label for="fileInput">JSON-Datei auswählen</label>
-    <input type="file" id="fileInput" accept=".json,application/json" onchange="handleFileUpload(event)">
-  </div>
-
-  <div class="load-divider">oder</div>
-
-  <div class="load-section">
-    <label for="jsonPaste">JSON hier einfügen:</label>
-    <textarea id="jsonPaste" placeholder='{"metadata": {...}, "grid": [...], "clues": {...}}'></textarea>
-    <div style="margin-top: 8px;">
-      <button class="btn btn-primary" onclick="handlePaste()">Laden</button>
-    </div>
-  </div>
-
-  <div class="load-error" id="loadError"></div>
-</div>
 
 <!-- Player view -->
 <div class="player-layout" id="playerLayout">
@@ -485,9 +378,10 @@
         <div class="crossword-grid" id="crosswordGrid"></div>
       </div>
     </div>
-    <div class="player-toolbar">
-      <button class="btn btn-accent" onclick="checkSolution()">Lösung prüfen</button>
-      <button class="btn btn-outline" onclick="resetPuzzle()">Zurücksetzen</button>
+    <div id="activeClueBox">
+      <button id="prevClueBtn" aria-label="Vorheriger Hinweis">&larr;</button>
+      <div id="activeClueBoxText">Wähle ein Wort aus…</div>
+      <button id="nextClueBtn" aria-label="Nächster Hinweis">&rarr;</button>
     </div>
     <div class="status-bar" id="statusBar">Klicke auf eine Zelle oder einen Hinweis, um zu beginnen.</div>
   </div>
@@ -522,6 +416,18 @@ let cellMap = null;       // Map<"r,c", { number, acrossClue, downClue }>
 let selectedClue = null;  // { direction: 'across'|'down', index: number (into puzzle.clues array) }
 let activePos = null;     // { row, col } — current cursor position
 let checkActive = false;  // Whether check-solution highlights are shown
+
+function updateActiveClueDisplays(direction, clue) {
+  const boxText = document.getElementById('activeClueBoxText');
+  if (boxText) {
+    if (!clue) {
+      boxText.textContent = 'Wähle ein Wort aus\u2026';
+    } else {
+      const dirLabel = direction === 'across' ? 'Waagerecht' : 'Senkrecht';
+      boxText.textContent = clue.number + ' ' + dirLabel + ': ' + clue.hint;
+    }
+  }
+}
 
 // ============================================================
 // PUZZLE LOADING
@@ -606,60 +512,24 @@ function init() {
       loadPuzzle(data);
       return;
     } catch (e) {
-      showLoadError('Fehler beim Laden aus URL-Parameter: ' + e.message);
+      setStatus('Fehler beim Laden aus URL-Parameter: ' + e.message, 'error');
     }
-  }
-}
-
-function handleFileUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      loadPuzzle(data);
-    } catch (err) {
-      showLoadError('Ungültige JSON-Datei: ' + err.message);
-    }
-  };
-  reader.readAsText(file);
-}
-
-function handlePaste() {
-  const text = document.getElementById('jsonPaste').value.trim();
-  if (!text) {
-    showLoadError('Bitte JSON einfügen.');
     return;
   }
-  try {
-    const data = JSON.parse(text);
-    loadPuzzle(data);
-  } catch (err) {
-    showLoadError('Ungültiges JSON: ' + err.message);
-  }
+
+  setStatus('Kein Rätsel gefunden. Bitte eine Rätsel-URL öffnen.', 'error');
 }
 
-function showLoadError(msg) {
-  const el = document.getElementById('loadError');
-  el.textContent = msg;
-  el.classList.add('visible');
-}
 
-function hideLoadError() {
-  const el = document.getElementById('loadError');
-  el.textContent = '';
-  el.classList.remove('visible');
-}
 
 function loadPuzzle(data) {
   // Validate minimal structure
   if (!data.clues || !data.metadata) {
-    showLoadError('Ungültiges Rätselformat: "clues" und "metadata" werden benötigt.');
+    setStatus('Ungültiges Rätselformat: "clues" und "metadata" werden benötigt.', 'error');
     return;
   }
   if (!data.clues.across || !data.clues.down) {
-    showLoadError('Ungültiges Rätselformat: "clues.across" und "clues.down" werden benötigt.');
+    setStatus('Ungültiges Rätselformat: "clues.across" und "clues.down" werden benötigt.', 'error');
     return;
   }
   if (!data.grid) {
@@ -667,7 +537,6 @@ function loadPuzzle(data) {
   }
 
   puzzle = data;
-  hideLoadError();
 
   // Initialize player grid
   const rows = data.metadata.gridSize.rows;
@@ -684,9 +553,7 @@ function loadPuzzle(data) {
   buildCellMap();
 
   // Switch views
-  document.getElementById('loadScreen').style.display = 'none';
   document.getElementById('playerLayout').classList.add('active');
-  document.getElementById('headerActions').style.display = 'flex';
 
   // Set puzzle info
   document.getElementById('puzzleTitle').textContent = data.metadata.title || 'Kreuzworträtsel';
@@ -703,21 +570,6 @@ function loadPuzzle(data) {
   setStatus('Klicke auf eine Zelle oder einen Hinweis, um zu beginnen.');
 }
 
-function loadNewPuzzle() {
-  puzzle = null;
-  playerGrid = null;
-  cellMap = null;
-  selectedClue = null;
-  activePos = null;
-  checkActive = false;
-
-  document.getElementById('loadScreen').style.display = '';
-  document.getElementById('playerLayout').classList.remove('active');
-  document.getElementById('headerActions').style.display = 'none';
-  document.getElementById('fileInput').value = '';
-  document.getElementById('jsonPaste').value = '';
-  hideLoadError();
-}
 
 // ============================================================
 // CELL MAP
@@ -914,9 +766,11 @@ function onCellClick(row, col) {
         selectedClue = { direction: 'across', index: info.acrossClue };
       }
       activePos = { row: row, col: col };
+      updateActiveClueDisplays(selectedClue.direction, getSelectedClueData());
       renderGrid();
+      const proxy = document.getElementById('keyProxy');
+      if (proxy) proxy.focus();
       renderClues();
-      scrollToActiveClue();
       return;
     }
   }
@@ -933,14 +787,17 @@ function onCellClick(row, col) {
   }
 
   activePos = { row: row, col: col };
+  updateActiveClueDisplays(selectedClue ? selectedClue.direction : null, getSelectedClueData());
   renderGrid();
+  const proxy = document.getElementById('keyProxy');
+  if (proxy) proxy.focus();
   renderClues();
-  scrollToActiveClue();
 }
 
 function onClueClick(direction, index) {
   checkActive = false;
   selectedClue = { direction: direction, index: index };
+  updateActiveClueDisplays(direction, getSelectedClueData());
 
   // Move cursor to first empty cell in the word, or first cell
   const clueData = getSelectedClueData();
@@ -962,17 +819,6 @@ function onClueClick(direction, index) {
 
   renderGrid();
   renderClues();
-  scrollToActiveClue();
-}
-
-function scrollToActiveClue() {
-  if (!selectedClue) return;
-  const listId = selectedClue.direction === 'across' ? 'acrossClues' : 'downClues';
-  const list = document.getElementById(listId);
-  const activeLi = list.querySelector('li.active');
-  if (activeLi) {
-    activeLi.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
 }
 
 // ============================================================
@@ -981,6 +827,7 @@ function scrollToActiveClue() {
 
 document.addEventListener('keydown', function(e) {
   if (!puzzle || !activePos) return;
+  if (e.target === document.getElementById('keyProxy')) return;
 
   // Don't capture if focus is on an input/textarea
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -1001,12 +848,14 @@ document.addEventListener('keydown', function(e) {
     advanceCursor(1);
     renderGrid();
     renderClues();
+    checkIfComplete();
     return;
   }
 
   if (key === 'Backspace') {
     e.preventDefault();
     checkActive = false;
+    clearCheckHighlights();
     if (playerGrid[activePos.row][activePos.col] !== '') {
       playerGrid[activePos.row][activePos.col] = '';
       renderGrid();
@@ -1022,6 +871,7 @@ document.addEventListener('keydown', function(e) {
   if (key === 'Delete') {
     e.preventDefault();
     checkActive = false;
+    clearCheckHighlights();
     playerGrid[activePos.row][activePos.col] = '';
     renderGrid();
     return;
@@ -1033,7 +883,6 @@ document.addEventListener('keydown', function(e) {
     advanceClue(e.shiftKey ? -1 : 1);
     renderGrid();
     renderClues();
-    scrollToActiveClue();
     return;
   }
 
@@ -1043,7 +892,6 @@ document.addEventListener('keydown', function(e) {
     advanceClue(1);
     renderGrid();
     renderClues();
-    scrollToActiveClue();
     return;
   }
 
@@ -1067,6 +915,77 @@ document.addEventListener('keydown', function(e) {
     moveArrow(-1, 0);
     return;
   }
+});
+
+// OS Keyboard Proxy — enables native mobile keyboard on cell tap
+(function() {
+  const proxy = document.getElementById('keyProxy');
+  if (!proxy) return;
+
+  proxy.addEventListener('input', function() {
+    if (!puzzle || !activePos) { proxy.value = ''; return; }
+    const val = proxy.value;
+    proxy.value = '';
+    if (!val) return;
+    const raw = val[val.length - 1];
+    if (/^[a-zA-ZäöüÄÖÜß]$/.test(raw)) {
+      const letters = raw.toUpperCase(); // 'ß' -> 'SS' (2 chars), others -> 1 char
+      checkActive = false;
+      for (let i = 0; i < letters.length; i++) {
+        playerGrid[activePos.row][activePos.col] = letters[i];
+        if (i < letters.length - 1) advanceCursor(1);
+      }
+      advanceCursor(1);
+      renderGrid();
+      checkIfComplete();
+      if (typeof saveState === 'function') saveState();
+    }
+  });
+
+  proxy.addEventListener('keydown', function(e) {
+    if (!puzzle || !activePos) return;
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      const r = activePos.row, c = activePos.col;
+      if (playerGrid[r][c] !== '') {
+        playerGrid[r][c] = '';
+      } else {
+        advanceCursor(-1);
+        playerGrid[activePos.row][activePos.col] = '';
+      }
+      checkActive = false; clearCheckHighlights();
+      renderGrid();
+      if (typeof saveState === 'function') saveState();
+    } else if (e.key === 'Delete') {
+      e.preventDefault();
+      const r = activePos.row, c = activePos.col;
+      playerGrid[r][c] = '';
+      checkActive = false; clearCheckHighlights();
+      renderGrid();
+      if (typeof saveState === 'function') saveState();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      advanceClue(e.shiftKey ? -1 : 1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      advanceClue(1);
+    } else if (e.key === 'ArrowRight') { e.preventDefault(); moveArrow(0, 1); }
+      else if (e.key === 'ArrowLeft')  { e.preventDefault(); moveArrow(0, -1); }
+      else if (e.key === 'ArrowDown')  { e.preventDefault(); moveArrow(1, 0); }
+      else if (e.key === 'ArrowUp')    { e.preventDefault(); moveArrow(-1, 0); }
+  });
+})();
+
+// Active Clue Box navigation buttons
+document.getElementById('prevClueBtn').addEventListener('click', function() {
+  advanceClue(-1);
+  var proxy = document.getElementById('keyProxy');
+  if (proxy) proxy.focus();
+});
+document.getElementById('nextClueBtn').addEventListener('click', function() {
+  advanceClue(1);
+  var proxy = document.getElementById('keyProxy');
+  if (proxy) proxy.focus();
 });
 
 function advanceCursor(dir) {
@@ -1152,7 +1071,6 @@ function moveArrow(dr, dc) {
       checkActive = false;
       renderGrid();
       renderClues();
-      scrollToActiveClue();
       return;
     }
     newR += dr;
@@ -1201,6 +1119,11 @@ function extractClueAnswer(clue, direction) {
 // CHECK / RESET
 // ============================================================
 
+function clearCheckHighlights() {
+  document.querySelectorAll('.grid-cell.correct, .grid-cell.incorrect')
+    .forEach(function(el) { el.classList.remove('correct', 'incorrect'); });
+}
+
 async function checkSolution() {
   if (!puzzle) return;
 
@@ -1239,6 +1162,18 @@ async function checkSolution() {
   } else {
     setStatus('Einige Buchstaben sind noch nicht korrekt. Falsche Zellen sind rot markiert.', 'error');
   }
+}
+
+function checkIfComplete() {
+  if (!puzzle || !playerGrid) return;
+  var rows = puzzle.metadata.gridSize.rows;
+  var cols = puzzle.metadata.gridSize.cols;
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      if (puzzle.grid[r][c] !== '' && playerGrid[r][c] === '') return;
+    }
+  }
+  checkSolution();
 }
 
 async function checkSolutionHashed() {
@@ -1301,13 +1236,11 @@ function resetPuzzle() {
 // Expose functions referenced by inline event handlers
 window.checkSolution    = checkSolution;
 window.resetPuzzle      = resetPuzzle;
-window.loadNewPuzzle    = loadNewPuzzle;
-window.handleFileUpload = handleFileUpload;
-window.handlePaste      = handlePaste;
 
 init();
 
 })();
 </script>
+<input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
 </body>
 </html>
