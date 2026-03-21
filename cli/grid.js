@@ -58,38 +58,22 @@ export class Grid {
         // Letter mismatch
         if (existing.letter !== letter) return false
       } else {
-        // Empty cell — check parallel adjacency (prevent side-by-side parallel words)
+        // Empty cell — check adjacency: no occupied neighbors in the perpendicular axis
         if (dir === 'horizontal') {
-          // For a horizontal word, neighbors above and below must be empty
-          // unless they are intersection points (which can't be empty — handled above)
           const above = this.cells.get(this._key(r - 1, c))
           const below = this.cells.get(this._key(r + 1, c))
-
-          // If the neighbor is occupied and belongs to a horizontal word (same direction), reject
-          if (above && this._cellBelongsToDirection(r - 1, c, 'horizontal')) return false
-          if (below && this._cellBelongsToDirection(r + 1, c, 'horizontal')) return false
+          if (above) return false
+          if (below) return false
         } else {
-          // For a vertical word, neighbors left and right must be empty
           const left  = this.cells.get(this._key(r, c - 1))
           const right = this.cells.get(this._key(r, c + 1))
-
-          if (left  && this._cellBelongsToDirection(r, c - 1, 'vertical')) return false
-          if (right && this._cellBelongsToDirection(r, c + 1, 'vertical')) return false
+          if (left)  return false
+          if (right) return false
         }
       }
     }
 
     return true
-  }
-
-  _cellBelongsToDirection(row, col, dir) {
-    const cell = this.cells.get(this._key(row, col))
-    if (!cell) return false
-    for (const ownerId of cell.owners) {
-      // ownerId format: "word@row,col,dir"
-      if (ownerId.endsWith(`,${dir}`)) return true
-    }
-    return false
   }
 
   place(word, hint, row, col, dir) {
