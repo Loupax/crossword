@@ -10,6 +10,8 @@ Last updated: 2026-03-21
 - [ ] Implement backend storage for cross-device progress synchronization.
 - [ ] Develop custom on-screen 'Crossword Keyboard' to replace OS proxy.
 - [ ] Optimize SHA-256 validation for low-power mobile devices.
+- [ ] Add swipe gestures to the Active Clue Box to cycle words.
+- [ ] Implement 'Focus Zoom' to automatically center the active word on small screens.
 
 ### Feature: TTL-Purge Script for word_history.csv
 - [ ] Write a script (purge-history or similar) that reads word_history.csv,
