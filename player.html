@@ -168,6 +168,7 @@
 
   .grid-scroll {
     display: inline-block;
+    position: relative;
   }
 
   .crossword-grid {
@@ -717,14 +718,13 @@ function renderGrid() {
     }
   }
 
-  // Roaming proxy: re-attach to grid and position over active cell
-  if (proxy) {
-    gridEl.appendChild(proxy);
-    if (activePos) {
-      const cellSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
-      proxy.style.top = (activePos.row * cellSize) + 'px';
-      proxy.style.left = (activePos.col * cellSize) + 'px';
-    }
+  // Roaming proxy: position over active cell
+  if (proxy && activePos) {
+    const gridEl2 = document.getElementById('crosswordGrid');
+    const cellSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
+    const borderOffset = gridEl2.clientTop; // equals border-top-width (2px)
+    proxy.style.top  = (gridEl2.offsetTop  + borderOffset + activePos.row * cellSize) + 'px';
+    proxy.style.left = (gridEl2.offsetLeft + borderOffset + activePos.col * cellSize) + 'px';
   }
 }
 
@@ -942,6 +942,7 @@ document.addEventListener('keydown', function(e) {
   proxy.setAttribute('spellcheck', 'false');
   proxy.setAttribute('maxlength', '1');
   proxy.style.cssText = 'position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;border:none;padding:0;margin:0;font-size:16px';
+  document.querySelector('.grid-scroll').appendChild(proxy);
 
   proxy.addEventListener('input', function() {
     if (!puzzle || !activePos) { proxy.value = ''; return; }
@@ -960,6 +961,7 @@ document.addEventListener('keydown', function(e) {
       renderGrid();
       checkIfComplete();
       if (typeof saveState === 'function') saveState();
+      proxy.focus();
     }
   });
 
