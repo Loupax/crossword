@@ -288,10 +288,21 @@ func (s *solver) backtrack(g *Grid, placed []Placement, remaining []Entry, isFir
 	// For the very first word, all words have the same number of positions so
 	// we just pick the longest to anchor the grid.
 	if isFirst {
-		// Sort remaining by length descending; place longest word first at centre.
+		// Sort remaining by length descending; place the longest word that fits
+		// in the grid first at centre. Words longer than the grid are skipped.
 		sortByLengthDesc(remaining)
-		entry := remaining[0]
-		rest := remaining[1:]
+		firstIdx := -1
+		for i, e := range remaining {
+			if len(e.Word) <= s.n {
+				firstIdx = i
+				break
+			}
+		}
+		if firstIdx == -1 {
+			return false // no word fits the grid
+		}
+		entry := remaining[firstIdx]
+		rest := append(remaining[:firstIdx:firstIdx], remaining[firstIdx+1:]...)
 
 		row := s.n / 2
 		col := (s.n - len(entry.Word)) / 2
@@ -306,7 +317,7 @@ func (s *solver) backtrack(g *Grid, placed []Placement, remaining []Entry, isFir
 				return true
 			}
 		}
-		// If longest word can't go there, give up on first placement — nothing else helps
+		// If longest fitting word can't go there, give up on first placement
 		return false
 	}
 
@@ -549,6 +560,22 @@ func main() {
 
 	entries := parseCSV(os.Stdin)
 	fmt.Fprintf(os.Stderr, "crossword-solver: read %d valid words from stdin\n", len(entries))
+
+	// Discard words that can't fit in the grid, then cap at 60 words.
+	// The CSP degrades badly beyond ~60 candidates; a large dictionary is
+	// best filtered upstream (e.g. via generate-daily's exclusion logic).
+	filtered := entries[:0]
+	for _, e := range entries {
+		if len(e.Word) >= 2 && len(e.Word) <= *size {
+			filtered = append(filtered, e)
+		}
+	}
+	entries = filtered
+	if len(entries) > 60 {
+		mathrand.Shuffle(len(entries), func(i, j int) { entries[i], entries[j] = entries[j], entries[i] })
+		entries = entries[:60]
+	}
+	fmt.Fprintf(os.Stderr, "crossword-solver: using %d words after filter\n", len(entries))
 
 	salt, err := generateSalt()
 	if err != nil {
