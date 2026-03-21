@@ -36,9 +36,9 @@ console.log(`Deployed: ${chosen} → docs/index.html`);
 fs.renameSync(srcPath, destPath);
 console.log(`Rotated: puzzles/backlog/${chosen} → puzzles/completed/${chosen}`);
 
-// Commit rotation locally (backlog → completed)
+// Commit docs/index.html (puzzle files themselves are gitignored)
 try {
-  execSync('git add puzzles/backlog puzzles/completed', { cwd: ROOT, stdio: 'inherit' });
+  execSync('git add docs/index.html', { cwd: ROOT, stdio: 'inherit' });
   execSync('git commit -m "chore: daily puzzle rotation"', { cwd: ROOT, stdio: 'inherit' });
   console.log('Git: committed rotation');
 } catch (err) {
