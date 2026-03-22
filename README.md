@@ -17,6 +17,7 @@ A self-contained toolchain for generating, solving, and publishing German crossw
   - [Bulk Word Generator (`generate_words` / `gen`)](#bulk-word-generator-generate_words--gen)
   - [Deploy Script (`scripts/deploy-daily`)](#deploy-script-scriptsdeploy-daily)
   - [Local Server (`serve`)](#local-server-serve)
+  - [Go CSP Solver (`solver/`)](#go-csp-solver-solver)
 - [CSV Word Format](#csv-word-format)
 - [Word History & Deduplication](#word-history--deduplication)
 - [Placement Strategies](#placement-strategies)
@@ -503,6 +504,30 @@ The live puzzle is always at `docs/index.html`. Completed puzzles are archived i
 
 ---
 
+### Go CSP Solver (`solver/`)
+
+A standalone Go binary that reads a word/hint CSV from stdin and outputs hashed puzzle JSON to stdout. Faster than the Node.js backtracker for large dictionaries.
+
+```bash
+cd solver && go build ./...
+cat words/crossword_Travel_B1_B2.csv | ./crossword-solver -size 15 -timeout 120 -words 150
+```
+
+**Options:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-size` | `15` | Grid N×N |
+| `-timeout` | `120` | Solver budget in seconds |
+| `-words` | `60` | Candidate words to sample from the dictionary |
+| `-title` | `"German Crossword"` | Puzzle title |
+
+**Output:** JSON to stdout (matching `window.__PUZZLE_DATA__` schema), logging to stderr. Inject into `player.html` via the `<!-- __PUZZLE_DATA_INJECTION__ -->` sentinel.
+
+**Algorithm:** MRV backtracking CSP with stratified word sampling (20% short / 50% medium / 30% long by length) and `crypto/rand` salt + SHA-256 hashing.
+
+---
+
 ## Directory Structure
 
 ```
@@ -514,6 +539,11 @@ crossword/
 ├── gen                     # Wrapper: runs generate_words across all 31 themes
 ├── serve                   # Local HTTP server (python3 -m http.server 8080)
 ├── word_history.csv        # Tracks used words to prevent repetition
+│
+├── solver/
+│   ├── main.go             # Go CSP solver — reads CSV stdin, outputs puzzle JSON
+│   ├── go.mod              # Go module (standard library only)
+│   └── crossword-solver    # Compiled binary (gitignored if desired)
 │
 ├── cli/
 │   ├── index.js            # CLI entry point (reads CSV stdin, outputs HTML)

@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Generate ~2000 German crossword words using Haiku and write to a single CSV."""
+
+import os
+import time
+import random
+import anthropic
+
+MODEL = "claude-haiku-4-5-20251001"
+TARGET = 2000
+BATCH = 100  # words per API call → 20 calls total
+
+THEMES = [
+    "Travel", "Food and Cooking", "Daily Routine", "Nature and Weather",
+    "Home and Furniture", "Clothing and Fashion", "Shopping and Money",
+    "Family and Relationships", "Professions and Work", "School and Education",
+    "Sports and Fitness", "Health and Human Body", "City and Infrastructure",
+    "Animals and Pets", "Technology and Communication", "Arts and Culture",
+    "Tools and DIY", "Geography and Countries", "Environment and Sustainability",
+    "Time and Calendar",
+]
+LEVELS = ["A1", "A2", "B1"]
+
+SYSTEM = """You generate German crossword word-and-hint pairs.
+
+Rules:
+- Words must be uppercase A-Z only. Expand umlauts: Ä→AE, Ö→OE, Ü→UE, ß→SS.
+- Length mix per batch: 1/3 short (3-4 letters), 1/3 medium (5-7), 1/3 long (8-12).
+- Hints in German, 1-3 words, no articles, CEFR B1 vocabulary.
+- Hints must match the word's part of speech.
+- Do NOT use direct dictionary definitions. Be creative and lateral.
+- Output ONLY raw CSV lines. Format: WORD,"Hint"
+- No markdown, no explanations, no blank lines."""
+
+
+def generate_batch(client, theme, level, n, seen):
+    prompt = (
+        f"Generate exactly {n} German crossword pairs.\n"
+        f"CEFR word level: {level}\n"
+        f"Theme: {theme}\n"
+        f"Already used words (skip these): {', '.join(list(seen)[:200]) if seen else 'none'}\n\n"
+        f"Output ONLY raw CSV. Format: WORD,\"Hint\""
+    )
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=2048,
+        system=SYSTEM,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text = resp.content[0].text.strip()
+    results = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or ',' not in line or line.startswith('`') or line.startswith('#'):
+            continue
+        word = line.split(',')[0].strip().upper()
+        if not word or not word.isalpha() or word in seen:
+            continue
+        seen.add(word)
+        results.append(line)
+    return results
+
+
+def main():
+    client = anthropic.Anthropic()
+    seen = set()
+    all_lines = []
+
+    outfile = os.path.join(os.path.dirname(__file__), "words_bulk.csv")
+
+    # Build a shuffled work queue of (theme, level) pairs
+    queue = [(t, l) for t in THEMES for l in LEVELS]
+    random.shuffle(queue)
+
+    batch_num = 0
+    total_batches = (TARGET + BATCH - 1) // BATCH
+
+    print(f"Target: {TARGET} words | Model: {MODEL} | Batches: {total_batches}")
+    print(f"Output: {outfile}\n")
+
+    for theme, level in queue:
+        if len(all_lines) >= TARGET:
+            break
+
+        remaining = TARGET - len(all_lines)
+        n = min(BATCH, remaining)
+        batch_num += 1
+
+        print(f"[{batch_num}/{total_batches}] {theme} / {level} — requesting {n} words...")
+        try:
+            lines = generate_batch(client, theme, level, n, seen)
+            all_lines.extend(lines)
+            print(f"  → got {len(lines)} unique words (total: {len(all_lines)})")
+        except Exception as e:
+            print(f"  → error: {e}")
+
+        time.sleep(0.5)
+
+    with open(outfile, "w", encoding="utf-8") as f:
+        f.write('\n'.join(all_lines) + '\n')
+
+    print(f"\nDone. {len(all_lines)} words written to {outfile}")
+
+
+if __name__ == "__main__":
+    main()
