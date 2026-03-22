@@ -168,6 +168,7 @@
 
   .grid-scroll {
     display: inline-block;
+    position: relative;
   }
 
   .crossword-grid {
@@ -175,6 +176,7 @@
     gap: 0;
     border: 2px solid var(--primary-dark);
     user-select: none;
+    position: relative;
   }
 
   .grid-cell {
@@ -327,6 +329,7 @@
   margin: 8px 0;
   height: 60px;
   flex-shrink: 0;
+  position: relative;
 }
 #activeClueBoxText {
   flex: 1;
@@ -360,7 +363,11 @@
   pointer-events: none;
   width: 1px;
   height: 1px;
-  top: -9999px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font-size: 16px;
+  transition: none;
 }
 </style>
 </head>
@@ -413,6 +420,7 @@ let cellMap = null;       // Map<"r,c", { number, acrossClue, downClue }>
 let selectedClue = null;  // { direction: 'across'|'down', index: number (into puzzle.clues array) }
 let activePos = null;     // { row, col } — current cursor position
 let checkActive = false;  // Whether check-solution highlights are shown
+let proxy = null;         // Roaming key proxy input element
 
 function updateActiveClueDisplays(direction, clue) {
   const boxText = document.getElementById('activeClueBoxText');
@@ -709,6 +717,15 @@ function renderGrid() {
       gridEl.appendChild(cell);
     }
   }
+
+  // Roaming proxy: position over active cell
+  if (proxy && activePos) {
+    const gridEl2 = document.getElementById('crosswordGrid');
+    const cellSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size'));
+    const borderOffset = gridEl2.clientTop; // equals border-top-width (2px)
+    proxy.style.top  = (gridEl2.offsetTop  + borderOffset + activePos.row * cellSize) + 'px';
+    proxy.style.left = (gridEl2.offsetLeft + borderOffset + activePos.col * cellSize) + 'px';
+  }
 }
 
 function renderClues() {
@@ -916,8 +933,16 @@ document.addEventListener('keydown', function(e) {
 
 // OS Keyboard Proxy — enables native mobile keyboard on cell tap
 (function() {
-  const proxy = document.getElementById('keyProxy');
-  if (!proxy) return;
+  proxy = document.createElement('input');
+  proxy.type = 'text';
+  proxy.id = 'keyProxy';
+  proxy.setAttribute('autocorrect', 'off');
+  proxy.setAttribute('autocapitalize', 'characters');
+  proxy.setAttribute('autocomplete', 'off');
+  proxy.setAttribute('spellcheck', 'false');
+  proxy.setAttribute('maxlength', '1');
+  proxy.style.cssText = 'position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;border:none;padding:0;margin:0;font-size:16px';
+  document.querySelector('.grid-scroll').appendChild(proxy);
 
   proxy.addEventListener('input', function() {
     if (!puzzle || !activePos) { proxy.value = ''; return; }
@@ -936,6 +961,7 @@ document.addEventListener('keydown', function(e) {
       renderGrid();
       checkIfComplete();
       if (typeof saveState === 'function') saveState();
+      proxy.focus();
     }
   });
 
@@ -966,6 +992,8 @@ document.addEventListener('keydown', function(e) {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       advanceClue(1);
+    } else if (e.key === ' ') {
+      e.preventDefault();
     } else if (e.key === 'ArrowRight') { e.preventDefault(); moveArrow(0, 1); }
       else if (e.key === 'ArrowLeft')  { e.preventDefault(); moveArrow(0, -1); }
       else if (e.key === 'ArrowDown')  { e.preventDefault(); moveArrow(1, 0); }
@@ -1238,6 +1266,6 @@ init();
 
 })();
 </script>
-<input id="keyProxy" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
+
 </body>
 </html>

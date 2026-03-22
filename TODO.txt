@@ -1,5 +1,5 @@
 # TODO — German Crossword Creator
-Last updated: 2026-03-21
+Last updated: 2026-03-21 (session 7)
 
 ## In Progress
 (nothing currently in progress)
@@ -7,6 +7,7 @@ Last updated: 2026-03-21
 ## Backlog
 
 ### Feature: Mobile Player Enhancements
+- [ ] Remove the "1 horizontal" / "2 vertical" prefix from the active clue box — show only the hint text to save space
 - [ ] Implement backend storage for cross-device progress synchronization.
 - [ ] Develop custom on-screen 'Crossword Keyboard' to replace OS proxy.
 - [ ] Optimize SHA-256 validation for low-power mobile devices.
@@ -66,5 +67,11 @@ Last updated: 2026-03-21
 
 ### Feature: Deployment Pipeline
 - [x] scripts/deploy-daily — moves first HTML from puzzles/backlog/ to docs/index.html,
-      archives to puzzles/completed/, commits and pushes via Git
+      archives to puzzles/completed/, commits rotation, deploys via wrangler (Cloudflare Pages)
 - [x] serve — local HTTP server on port 8080 (python3 -m http.server)
+
+### Chore: Public Puzzle Hosting
+- [ ] Decide on hosting approach: Cloudflare Pages (branch ready, but needs DNS change for
+      loupax.me) vs. public submodule repo (crossword-daily) served via GitHub Pages
+- [ ] If submodule: create public repo, add as submodule at docs/, update deploy-daily to
+      commit + push the submodule and then update the pointer in the main repo
